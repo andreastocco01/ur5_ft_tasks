@@ -10,6 +10,7 @@ project(ur5_ft_tasks)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  moveit_ros_planning_interface
 )
 
 ## System dependencies are found with CMake's conventions
