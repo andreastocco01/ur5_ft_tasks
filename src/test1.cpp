@@ -5,6 +5,8 @@
 #include <moveit_msgs/CollisionObject.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Vector3.h>
+#include "robotiq_ft_sensor/ft_sensor.h"
+#include "robotiq_ft_sensor/sensor_accessor.h"
 
 geometry_msgs::Vector3 force;
 geometry_msgs::Vector3 torque;
@@ -12,7 +14,7 @@ geometry_msgs::Vector3 torque;
 void callback(const geometry_msgs::WrenchStamped::ConstPtr& msg) {
     force = msg->wrench.force;
     torque = msg->wrench.torque;
-    ROS_INFO("I heard: fx[%f], fy[%f], fz[%f], tx[%f], ty[%f], tz[%f]", force.x, force.y, force.z, torque.x, torque.y, torque.z);
+    //ROS_INFO("I heard: fx[%f], fy[%f], fz[%f], tx[%f], ty[%f], tz[%f]", force.x, force.y, force.z, torque.x, torque.y, torque.z);
 }
 
 
@@ -39,8 +41,10 @@ int main(int argc, char** argv) {
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     moveit::planning_interface::PlanningSceneInterface current_scene;
 
-    //ros::ServiceClient client = n.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
+    ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
+
+    robotiq_ft_sensor::sensor_accessor srv;
 
     // 1. Move to home position
     move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
@@ -51,12 +55,10 @@ int main(int argc, char** argv) {
 
     move_group.move();
 
-    sleep(80);
-
     int direction_x = 0;
     int direction_y = 0;
     int direction_z = 0;
-    const double variation = 0.1;
+    const double variation = 0.05;
 
     while(ros::ok()) {
         geometry_msgs::PoseStamped current_pose;
@@ -67,8 +69,8 @@ int main(int argc, char** argv) {
         else if(force.x < -10) direction_x = 1;
         else direction_x = 0;
 
-        if(force.y > 10) direction_y = -1;
-        else if(force.y < -10) direction_y = 1;
+        if(force.y > 10) direction_y = 1;
+        else if(force.y < -10) direction_y = -1;
         else direction_y = 0;
 
         if(force.z > 10) direction_z = -1;
@@ -83,6 +85,13 @@ int main(int argc, char** argv) {
             success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
             ROS_INFO("Target move %s", success ? "SUCCESS" : "FAILED");
             move_group.move();
+
+            // zero the sensor after every movement
+            srv.request.command_id = srv.request.COMMAND_SET_ZERO;
+
+            if (client.call(srv)) {
+                ROS_INFO("ret: %s", srv.response.res.c_str());
+            }
         }
         ros::spinOnce();
     }

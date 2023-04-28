@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   moveit_ros_planning_interface
+  robotiq_ft_sensor
 )
 
 ## System dependencies are found with CMake's conventions
