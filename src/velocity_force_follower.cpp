@@ -1,21 +1,25 @@
 #include <ros/ros.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit_msgs/AttachedCollisionObject.h>
-#include <moveit_msgs/CollisionObject.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include "robotiq_ft_sensor/ft_sensor.h"
 #include "robotiq_ft_sensor/sensor_accessor.h"
-#include "geometry_msgs/Twist.h"
+#include <geometry_msgs/Twist.h>
+#include <stdlib.h>
+#include <controller_manager_msgs/LoadController.h>
+#include <controller_manager_msgs/SwitchController.h>
+#include <signal.h>
 
 geometry_msgs::Vector3 force, torque;
+ros::ServiceClient switch_client;
+controller_manager_msgs::SwitchController switch_srv;
 
 void zero_sensor(robotiq_ft_sensor::sensor_accessor &srv, ros::ServiceClient &client) {
     srv.request.command_id = srv.request.COMMAND_SET_ZERO;
 
     if (client.call(srv)) {
-        ROS_INFO("ret: %s", srv.response.res.c_str());
+        ROS_INFO("Zeroing: %s", srv.response.res.c_str());
     }
 }
 
@@ -34,13 +38,50 @@ geometry_msgs::Vector3 set(double x, double y, double z) {
     return vector;
 }
 
+void load_controller(ros::ServiceClient client, controller_manager_msgs::LoadController srv, char* controller) {
+    srv.request.name = controller;
+    if(client.call(srv)) ROS_INFO("LOAD %s", controller);
+    else ROS_ERROR("FAILED to load %s", controller);
+}
+
+void switch_controllers(ros::ServiceClient client, controller_manager_msgs::SwitchController srv, char* start, char* stop) {
+    srv.request.start_controllers.push_back(start);
+    srv.request.stop_controllers.push_back(stop);
+    srv.request.strictness = srv.request.STRICT;
+
+    if(client.call(srv)) ROS_INFO("START %s STOP %s", start, stop);
+    else ROS_ERROR("FAILED to switch controllers");
+
+    srv.request.start_controllers.clear();
+    srv.request.stop_controllers.clear();
+}
+
+void mySigintHandler(int sig) {
+    // Do some custom action.
+    // For example, publish a stop message to some other nodes.
+
+    // All the default sigint handler does is call shutdown()
+    switch_controllers(switch_client, switch_srv, "scaled_pos_joint_traj_controller", "twist_controller");
+
+    ros::shutdown();
+}
+
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "test2");
+    ros::init(argc, argv, "velocity_force_follower");
     ros::NodeHandle node;
+    // Override the default ros sigint handler.
+    // This must be set after the first NodeHandle is created.
+    signal(SIGINT, mySigintHandler);
 
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
+    ros::ServiceClient load_client = node.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
+    switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
+
+    controller_manager_msgs::LoadController load_srv;
+    load_controller(load_client, load_srv, "twist_controller");
+    switch_controllers(switch_client, switch_srv, "twist_controller", "scaled_pos_joint_traj_controller");
 
     robotiq_ft_sensor::sensor_accessor srv;
 
@@ -58,30 +99,39 @@ int main(int argc, char** argv) {
     int dy = 0;
     int dz = 0;
 
-    double speed = 0.0;
+    double speedx = 0.0;
+    double speedy = 0.0;
+    double speedz = 0.0;
+
+    ros::Rate rate(10);
+    int alpha = 300;
+    int threshold = 8;
 
     while(ros::ok()) {
-        if(force.x > 8) dx = 1;
-        else if(force.x < -8) dx = -1;
+        if(force.x > threshold) dx = 1;
+        else if(force.x < -threshold) dx = -1;
         else dx = 0;
 
-        if(force.y > 8) dy = -1;
-        else if(force.y < -8) dy = 1;
+        if(force.y > threshold) dy = -1;
+        else if(force.y < -threshold) dy = 1;
         else dy = 0;
 
-        if(force.z > 8) dz = -1;
-        else if(force.z < -8) dz = 1;
+        if(force.z > threshold) dz = -1;
+        else if(force.z < -threshold) dz = 1;
         else dz = 0;
 
-        if (dx != 0 || dy != 0 || dz != 0) speed = 0.1; // if at least one of the direction isn't zero, move
-        else speed = 0.0;
+        if (dx != 0) speedx = force.x / alpha;
+        else if (dy != 0) speedy = force.y / alpha;
+        else if (dz != 0) speedz = force.z / alpha;
+        else speedx, speedy, speedz = 0.0;
 
-        linear = set(dx * speed, dy * speed, dz * speed);
+        linear = set(dx * std::abs(speedx), dy * std::abs(speedy), dz * std::abs(speedz));
         move.linear = linear;
 
         publisher.publish(move);
 
         ros::spinOnce();
+        rate.sleep();
     }
     return 0;
 }
