@@ -219,4 +219,4 @@ add_executable(fake_sensor src/fake_sensor.cpp)
 target_link_libraries(fake_sensor ${catkin_LIBRARIES})
 
 add_executable(viscosity src/viscosity.cpp)
-target_link_libraries(viscosity ${catkin_LIBRARIES})
+target_link_libraries(viscosity ${catkin_LIBRARIES} controllers)
