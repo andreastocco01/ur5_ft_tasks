@@ -82,13 +82,13 @@ int main(int argc, char** argv) {
 
     // take current pose
     geometry_msgs::PoseStamped current_pose;
-    current_pose = move_group.getCurrentPose("tool0");
+    current_pose = move_group.getCurrentPose("robotiq_ft_frame_id"); // this is the end-effector!!!
 
     // go down
     geometry_msgs::Pose target_pose;
     target_pose.position.x = current_pose.pose.position.x;
     target_pose.position.y = current_pose.pose.position.y;
-    target_pose.position.z = current_pose.pose.position.z - 0.25;
+    target_pose.position.z = current_pose.pose.position.z - 0.177;
     target_pose.orientation = current_pose.pose.orientation;
 
     move_group.setPoseTarget(target_pose);
@@ -118,10 +118,10 @@ int main(int argc, char** argv) {
     move.angular = angular;
     publisher.publish(move);
 
-    double speed = 0.5;
+    double speed = 0.8;
     int count = 0;
     int times = 0;
-    ros::Rate rate(50);
+    ros::Rate rate(70);
     std::vector<geometry_msgs::Vector3> vec;
 
     while(ros::ok()) {
@@ -139,10 +139,6 @@ int main(int argc, char** argv) {
         ros::spinOnce();
         vec.push_back(torque);
         rate.sleep();
-    }
-
-    for(int i = 0; i < vec.size(); i++) {
-        std::cout << vec[i] << std::endl;
     }
 
     ROS_INFO("Mean: %f\nStandard deviation: %f", mean(vec).z, standard_deviation(vec, mean(vec)).z);
