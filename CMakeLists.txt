@@ -209,6 +209,9 @@ include_directories(
 add_library(controllers src/controllers.cpp)
 target_link_libraries(controllers ${catkin_LIBRARIES})
 
+add_library(utils src/utils.cpp)
+target_link_libraries(utils ${catkin_LIBRARIES})
+
 add_executable(position_force_follower src/position_force_follower.cpp)
 target_link_libraries(position_force_follower ${catkin_LIBRARIES})
 
@@ -219,4 +222,4 @@ add_executable(fake_sensor src/fake_sensor.cpp)
 target_link_libraries(fake_sensor ${catkin_LIBRARIES})
 
 add_executable(viscosity src/viscosity.cpp)
-target_link_libraries(viscosity ${catkin_LIBRARIES} controllers)
+target_link_libraries(viscosity ${catkin_LIBRARIES} controllers utils)
