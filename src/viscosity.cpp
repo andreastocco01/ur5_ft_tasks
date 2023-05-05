@@ -7,6 +7,7 @@
 #include <ur5_ft_tasks/controllers.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <ur5_ft_tasks/utils.h>
 #include <signal.h>
 
 geometry_msgs::Vector3 force, torque;
@@ -117,32 +118,35 @@ int main(int argc, char** argv) {
     move.angular = angular;
     publisher.publish(move);
 
-    double speed = 0.05;
+    double speed = 0.5;
     int count = 0;
     int times = 0;
     ros::Rate rate(50);
     std::vector<geometry_msgs::Vector3> vec;
 
     while(ros::ok()) {
-        if(times == 3) break;
-        ROS_INFO("%d", count);
-        if(count <= 100) linear = set(-speed, 0, 0);
-        else if (count > 100 && count <= 300) linear = set(speed, 0, 0);
-        else if (count > 300 && count < 400) linear = set(-speed, 0, 0);
+        if(times == 2) break;
+        if(count <= 100) angular = set(0, 0, -speed);
+        else if (count > 100 && count <= 300) angular = set(0, 0, speed);
+        else if (count > 300 && count < 400) angular = set(0, 0, -speed);
         else {
             count = 0;
             times++;
         }
         count++;
-        move.linear = linear;
+        move.angular = angular;
         publisher.publish(move);
         ros::spinOnce();
-        vec.push_back(force);
+        vec.push_back(torque);
         rate.sleep();
     }
+
     for(int i = 0; i < vec.size(); i++) {
         std::cout << vec[i] << std::endl;
     }
+
+    ROS_INFO("Mean: %f\nStandard deviation: %f", mean(vec).z, standard_deviation(vec, mean(vec)).z);
+
     mySigintHandler(SIGINT);
     return 0;
 }
