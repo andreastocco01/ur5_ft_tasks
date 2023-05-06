@@ -37,8 +37,7 @@ geometry_msgs::Vector3 set(double x, double y, double z) {
     return vector;
 }
 
-void mySigintHandler(int sig)
-{
+void mySigintHandler(int sig) {
     // Do some custom action.
     // For example, publish a stop message to some other nodes.
 
@@ -74,23 +73,21 @@ int main(int argc, char** argv) {
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     moveit::planning_interface::PlanningSceneInterface current_scene;
 
-    // move to home position
+    // 1. move to home_viscosity position
     move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
     bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
     move_group.move();
 
-    // take current pose
     geometry_msgs::PoseStamped current_pose;
-    current_pose = move_group.getCurrentPose("robotiq_ft_frame_id"); // this is the end-effector!!!
-
-    // go down
     geometry_msgs::Pose target_pose;
+
+    // 2. go down
+    current_pose = move_group.getCurrentPose("robotiq_ft_frame_id"); // this is the end-effector!!!
     target_pose.position.x = current_pose.pose.position.x;
     target_pose.position.y = current_pose.pose.position.y;
     target_pose.position.z = current_pose.pose.position.z - 0.177;
     target_pose.orientation = current_pose.pose.orientation;
-
     move_group.setPoseTarget(target_pose);
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     ROS_INFO("Down move %s", success ? "SUCCESS" : "FAILED");
@@ -99,10 +96,12 @@ int main(int argc, char** argv) {
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
+
     ros::ServiceClient load_client = node.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
     switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 
     controller_manager_msgs::LoadController load_srv;
+
     load_controller(load_client, load_srv, (char*)"twist_controller");
     switch_controllers(switch_client, switch_srv, (char*)"twist_controller", (char*)"scaled_pos_joint_traj_controller");
 
@@ -119,23 +118,22 @@ int main(int argc, char** argv) {
     publisher.publish(move);
 
     double speed = 0.8;
-    int count = 0;
-    int times = 0;
-    ros::Rate rate(70);
-    std::vector<geometry_msgs::Vector3> vec;
+    angular = set(0, 0, speed);
+    move.angular = angular;
 
+    ros::Rate rate(100);
+    std::vector<geometry_msgs::Vector3> vec;
+    ros::Time startTime = ros::Time::now();
     while(ros::ok()) {
-        if(times == 2) break;
-        if(count <= 100) angular = set(0, 0, -speed);
-        else if (count > 100 && count <= 300) angular = set(0, 0, speed);
-        else if (count > 300 && count < 400) angular = set(0, 0, -speed);
-        else {
-            count = 0;
-            times++;
-        }
-        count++;
-        move.angular = angular;
         publisher.publish(move);
+
+        // Check if the desired sleep duration has elapsed
+        ros::Duration duration = ros::Time::now() - startTime;
+        if (duration.toSec() >= 6) {
+            // Break the loop and exit
+            break;
+        }
+
         ros::spinOnce();
         vec.push_back(torque);
         rate.sleep();
