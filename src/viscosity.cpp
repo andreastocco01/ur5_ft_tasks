@@ -47,6 +47,10 @@ void mySigintHandler(int sig) {
     ros::shutdown();
 }
 
+double calculate_viscosity(double force, double velocity) {
+    return force / (2 * 0.06 * 0.04 * 0.004 * velocity);
+}
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "viscosity");
     ros::NodeHandle node;
@@ -117,8 +121,8 @@ int main(int argc, char** argv) {
     move.angular = angular;
     publisher.publish(move);
 
-    double speed = 0.8;
-    angular = set(0, 0, speed);
+    double velocity = 0.8;
+    angular = set(0, 0, velocity);
     move.angular = angular;
 
     ros::Rate rate(100);
@@ -138,8 +142,11 @@ int main(int argc, char** argv) {
         vec.push_back(torque);
         rate.sleep();
     }
+    double force = mean(vec).z;
+    double viscosity = calculate_viscosity(force, velocity);
 
     ROS_INFO("Mean: %f\nStandard deviation: %f", mean(vec).z, standard_deviation(vec, mean(vec)).z);
+    ROS_INFO("Viscosity: %f", viscosity);
 
     mySigintHandler(SIGINT);
     return 0;
