@@ -269,6 +269,11 @@ def reach_point(point: Point):
     move_group.go(wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
+    # Restore contollers
+    switch_controller(
+        start_controllers=[UrControllersNames.twist_controller],
+        stop_controllers=[UrControllersNames.scaled_pos_joint_traj_controller]
+    )
 
 
 # Global variables
