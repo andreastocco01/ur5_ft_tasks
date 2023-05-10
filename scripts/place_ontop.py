@@ -248,3 +248,12 @@ in_contact: bool = False
 pause_contact_detection: bool = False
 # Buffer
 message_buffer = collections.deque(maxlen=15)
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        exit()
