@@ -349,15 +349,38 @@ def main():
     top_position = move_group.get_current_pose().pose.position
 
     # Move up, forward and down
-    top_offset_position = top_position
-    top_offset_position.z += v_offset
-    reach_point(top_offset_position) # Move UP offset
-    forward_offset_position = top_offset_position
+    up_offset_position = top_position
+    up_offset_position.z += v_offset
+    reach_point(up_offset_position) # Move UP offset
+    forward_offset_position = up_offset_position
     forward_offset_position.y += length_offset / 2
     reach_point(forward_offset_position) # Move forward
     down_offset_position = forward_offset_position
     down_offset_position.z -= v_offset * 2
     reach_point(down_offset_position) # Move down
+
+    # Move backward till contact
+    movement.linear = Vector3(0, -speed, 0)
+    publisher.publish(movement)
+    wait_until_contact(Movement.BACKWARD)
+    # Save position
+    forward_border_position = move_group.get_current_pose().pose.position
+
+    # Move up, backward, down
+    up_offset_position = forward_border_position
+    up_offset_position.z += v_offset * 2
+    reach_point(up_offset_position) # Move UP
+    backward_offset_position = up_offset_position
+    backward_offset_position.y -= length_offset
+    reach_point(backward_offset_position) # Move BACK
+    down_offset_position = backward_offset_position
+    down_offset_position.z -= v_offset * 2
+    reach_point(down_offset_position)
+
+    # Move forward till contact
+    movement.linear = Vector3(0, speed, 0)
+    publisher.publish(movement)
+    wait_until_contact(Movement.FORWARD)
 
 if __name__ == "__main__":
     try:
