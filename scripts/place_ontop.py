@@ -12,6 +12,8 @@ from controller_manager_msgs.srv import (ListControllers,
                                          UnloadController,
                                          UnloadControllerRequest,
                                          UnloadControllerResponse)
+from robotiq_ft_sensor.srv import (sensor_accessor, sensor_accessorRequest,
+                                   sensor_accessorResponse)
 
 '''
 UR Controllers list (from https://github.com/UniversalRobots/Universal_Robots_ROS_Driver/blob/master/ur_robot_driver/doc/controllers.md)
@@ -111,3 +113,14 @@ def switch_controller(start_controllers: List[str], stop_controllers: List[str],
     request = SwitchControllerRequest(start_controllers, stop_controllers, strictness, False, 0)
     response: SwitchControllerResponse = switch_controller_service.call(request)
     return response
+
+def zero_ft_sensor():
+    try:
+        zero_sensor_service = rospy.ServiceProxy("/robotiq_ft_sensor_acc", sensor_accessor)
+        request = sensor_accessorRequest(sensor_accessorRequest.COMMAND_SET_ZERO, "")
+        response: sensor_accessorResponse = zero_sensor_service.call(request)
+        rospy.sleep(0.5)
+        print(f"Sensor zeored: {response}")
+        return response
+    except rospy.service.ServiceException:
+        rospy.logwarn("Unable to connect to /robotiq_ft_sensor_acc and zero f/t sensor")
