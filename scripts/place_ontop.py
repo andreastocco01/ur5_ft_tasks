@@ -5,8 +5,13 @@ from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import (ListControllers,
                                          ListControllersResponse,
                                          LoadController, LoadControllerRequest,
-                                         UnloadControllerRequest, UnloadControllerResponse, UnloadController,
-                                         LoadControllerResponse)
+                                         LoadControllerResponse,
+                                         SwitchController,
+                                         SwitchControllerRequest,
+                                         SwitchControllerResponse,
+                                         UnloadController,
+                                         UnloadControllerRequest,
+                                         UnloadControllerResponse)
 
 '''
 UR Controllers list (from https://github.com/UniversalRobots/Universal_Robots_ROS_Driver/blob/master/ur_robot_driver/doc/controllers.md)
@@ -100,3 +105,9 @@ def unload_controller(controller_name: str) -> UnloadControllerResponse:
     load_controller_service = rospy.ServiceProxy("/controller_manager/unload_controller", UnloadController)
     request = UnloadControllerRequest(controller_name)
     response: UnloadControllerResponse = load_controller_service.call(request)
+
+def switch_controller(start_controllers: List[str], stop_controllers: List[str], strictness: int = 1):
+    switch_controller_service = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
+    request = SwitchControllerRequest(start_controllers, stop_controllers, strictness, False, 0)
+    response: SwitchControllerResponse = switch_controller_service.call(request)
+    return response
