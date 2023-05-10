@@ -275,12 +275,12 @@ def reach_point(point: Point):
         stop_controllers=[UrControllersNames.scaled_pos_joint_traj_controller]
     )
 
-
+# TODO: Fix signs of offsets - apparently moveit and twist controller have different reference frames
 # Global variables
 speed: float = 0.01
-v_offset: float = 0.1
-h_offset: float = 0.05
-length_offset: float = 0.5
+v_offset: float = 0.08
+h_offset: float = -0.15 #TODO: fix sign
+length_offset: float = -0.3 #TODO: fix sign
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
@@ -342,7 +342,7 @@ def main():
     # Move down till contact
     movement = Twist()
     movement.angular = Vector3(0, 0, 0)
-    movement.linear = Vector3(0, 0, speed) # Move down
+    movement.linear = Vector3(0, 0, -speed) # Move down
     publisher.publish(movement)
     wait_until_contact(Movement.DOWN)
     # Save position
@@ -381,6 +381,33 @@ def main():
     movement.linear = Vector3(0, speed, 0)
     publisher.publish(movement)
     wait_until_contact(Movement.FORWARD)
+    # Save position
+    backward_border_position = move_group.get_current_pose().pose.position
+
+    # Move up, center
+    up_offset_position = backward_border_position
+    up_offset_position.z += v_offset * 2
+    reach_point(up_offset_position) # Move UP
+    fb_center = up_offset_position
+    fb_center.y = (forward_border_position.y + backward_border_position.y) / 2
+    reach_point(fb_center) # Move center
+
+    # Move right, down
+    right_offset_position = fb_center
+    right_offset_position.x += h_offset
+    reach_point(right_offset_position) # Move right
+    down_offset_position = right_offset_position
+    down_offset_position.z -= v_offset * 2
+    reach_point(down_offset_position) # Move down
+
+    # Move left till contact
+    movement.linear = Vector3(-speed, 0, 0)
+    publisher.publish(movement)
+    wait_until_contact(Movement.LEFT)
+    # Save position
+    right_border_position = move_group.get_current_pose().pose.position
+
+    # Move up, left, down
 
 if __name__ == "__main__":
     try:
