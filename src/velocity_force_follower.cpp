@@ -1,14 +1,11 @@
 #include <ros/ros.h>
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include "robotiq_ft_sensor/ft_sensor.h"
 #include "robotiq_ft_sensor/sensor_accessor.h"
 #include <geometry_msgs/Twist.h>
+#include <ur5_ft_tasks/controllers.h>
 #include <stdlib.h>
-#include <controller_manager_msgs/LoadController.h>
-#include <controller_manager_msgs/SwitchController.h>
 #include <signal.h>
 
 geometry_msgs::Vector3 force, torque;
@@ -38,30 +35,12 @@ geometry_msgs::Vector3 set(double x, double y, double z) {
     return vector;
 }
 
-void load_controller(ros::ServiceClient client, controller_manager_msgs::LoadController srv, char* controller) {
-    srv.request.name = controller;
-    if(client.call(srv)) ROS_INFO("LOAD %s", controller);
-    else ROS_ERROR("FAILED to load %s", controller);
-}
-
-void switch_controllers(ros::ServiceClient client, controller_manager_msgs::SwitchController srv, char* start, char* stop) {
-    srv.request.start_controllers.push_back(start);
-    srv.request.stop_controllers.push_back(stop);
-    srv.request.strictness = srv.request.STRICT;
-
-    if(client.call(srv)) ROS_INFO("START %s STOP %s", start, stop);
-    else ROS_ERROR("FAILED to switch controllers");
-
-    srv.request.start_controllers.clear();
-    srv.request.stop_controllers.clear();
-}
-
 void mySigintHandler(int sig) {
     // Do some custom action.
     // For example, publish a stop message to some other nodes.
 
     // All the default sigint handler does is call shutdown()
-    switch_controllers(switch_client, switch_srv, "scaled_pos_joint_traj_controller", "twist_controller");
+    switch_controllers(switch_client, switch_srv, (char*)"scaled_pos_joint_traj_controller", (char*)"twist_controller");
 
     ros::shutdown();
 }
@@ -80,8 +59,8 @@ int main(int argc, char** argv) {
     switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 
     controller_manager_msgs::LoadController load_srv;
-    load_controller(load_client, load_srv, "twist_controller");
-    switch_controllers(switch_client, switch_srv, "twist_controller", "scaled_pos_joint_traj_controller");
+    load_controller(load_client, load_srv, (char*)"twist_controller");
+    switch_controllers(switch_client, switch_srv, (char*)"twist_controller", (char*)"scaled_pos_joint_traj_controller");
 
     robotiq_ft_sensor::sensor_accessor srv;
 

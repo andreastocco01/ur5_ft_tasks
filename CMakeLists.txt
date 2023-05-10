@@ -117,7 +117,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -206,14 +206,20 @@ catkin_install_python(PROGRAMS
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+add_library(controllers src/controllers.cpp)
+target_link_libraries(controllers ${catkin_LIBRARIES})
+
+add_library(utils src/utils.cpp)
+target_link_libraries(utils ${catkin_LIBRARIES})
+
 add_executable(position_force_follower src/position_force_follower.cpp)
 target_link_libraries(position_force_follower ${catkin_LIBRARIES})
 
 add_executable(velocity_force_follower src/velocity_force_follower.cpp)
-target_link_libraries(velocity_force_follower ${catkin_LIBRARIES})
+target_link_libraries(velocity_force_follower ${catkin_LIBRARIES} controllers)
 
 add_executable(fake_sensor src/fake_sensor.cpp)
 target_link_libraries(fake_sensor ${catkin_LIBRARIES})
 
 add_executable(viscosity src/viscosity.cpp)
-target_link_libraries(viscosity ${catkin_LIBRARIES})
+target_link_libraries(viscosity ${catkin_LIBRARIES} controllers utils)
