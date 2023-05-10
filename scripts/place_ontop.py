@@ -16,7 +16,7 @@ from controller_manager_msgs.srv import (ListControllers,
                                          UnloadController,
                                          UnloadControllerRequest,
                                          UnloadControllerResponse)
-from geometry_msgs.msg import Vector3, WrenchStamped, Twist
+from geometry_msgs.msg import Vector3, WrenchStamped, Twist, Pose, Point
 from moveit_commander.move_group import MoveGroupCommander
 from moveit_commander.roscpp_initializer import roscpp_initialize
 from robotiq_ft_sensor.srv import (sensor_accessor, sensor_accessorRequest,
@@ -255,12 +255,29 @@ def wait_until_contact(direction: int):
     # Resume contact detection
     pause_contact_detection = False
 
+def reach_point(point: Point):
+    # Set target pose
+    target_pose = move_group.get_current_pose().pose
+    target_pose.position = point
+    # Change controllers
+    switch_controller(
+        start_controllers=[UrControllersNames.scaled_pos_joint_traj_controller],
+        stop_controllers=[UrControllersNames.twist_controller]
+    )
+    # Reach position 
+    move_group.set_pose_target(target_pose)
+    move_group.go(wait=True)
+    move_group.stop()
+    move_group.clear_pose_targets()
+
+
 # Global variables
 speed: float
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
 out_contact_threshold: float = 0.7
+move_group: MoveGroupCommander
 # Semaphores for contact detection
 in_contact: bool = False
 pause_contact_detection: bool = False
