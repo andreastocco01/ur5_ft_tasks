@@ -3,6 +3,7 @@ import os
 import sys
 from dataclasses import dataclass
 from typing import List
+import copy
 
 import rospy
 from controller_manager_msgs.msg import ControllerState
@@ -346,7 +347,8 @@ def main():
     publisher.publish(movement)
     wait_until_contact(Movement.DOWN)
     # Save position
-    top_position = move_group.get_current_pose().pose.position
+    top_position = copy.deepcopy(move_group.get_current_pose().pose.position)
+    rospy.loginfo(f"TOP POSITION:\n{top_position}")
 
     # Move up, forward and down
     up_offset_position = top_position
@@ -364,7 +366,8 @@ def main():
     publisher.publish(movement)
     wait_until_contact(Movement.BACKWARD)
     # Save position
-    forward_border_position = move_group.get_current_pose().pose.position
+    forward_border_position = copy.deepcopy(move_group.get_current_pose().pose.position)
+    rospy.loginfo(f"FORDWARD BORDER POSITION:\n{forward_border_position}")
 
     # Move up, backward, down
     up_offset_position = forward_border_position
@@ -382,7 +385,8 @@ def main():
     publisher.publish(movement)
     wait_until_contact(Movement.FORWARD)
     # Save position
-    backward_border_position = move_group.get_current_pose().pose.position
+    backward_border_position = copy.deepcopy(move_group.get_current_pose().pose.position)
+    rospy.loginfo(f"BACKWARD BORDER POSITION:\n{backward_border_position}")
 
     # Move up, center
     up_offset_position = backward_border_position
@@ -391,6 +395,7 @@ def main():
     fb_center = up_offset_position
     fb_center.y = (forward_border_position.y + backward_border_position.y) / 2
     reach_point(fb_center) # Move center
+    rospy.loginfo(f"CENTER FB POSITION:\n{fb_center}")
 
     # Move right, down
     right_offset_position = fb_center
@@ -405,7 +410,8 @@ def main():
     publisher.publish(movement)
     wait_until_contact(Movement.LEFT)
     # Save position
-    right_border_position = move_group.get_current_pose().pose.position
+    right_border_position = copy.deepcopy(move_group.get_current_pose().pose.position)
+    rospy.loginfo(f"RIGHT BORDER POSITION:\n{right_border_position}")
 
     # Move up, left, down
     up_offset_position = right_border_position
@@ -423,7 +429,8 @@ def main():
     publisher.publish(movement)
     wait_until_contact(Movement.RIGHT)
     # Save position
-    left_border_position = move_group.get_current_pose().pose.position
+    left_border_position = copy.deepcopy(move_group.get_current_pose().pose.position)
+    rospy.loginfo(f"LEFT BORDER POSITION:\n{forward_border_position}")
 
     # Move up
     up_offset_position = left_border_position
@@ -432,8 +439,9 @@ def main():
 
     # Calculate center x, y
     center_top = up_offset_position
-    center_top.x = (left_border_position.x + left_border_position.x)/2
+    center_top.x = (left_border_position.x + right_border_position.x)/2.0
     center_top.y = fb_center.y
+    rospy.loginfo(f"Desidered position X: {left_border_position.x} + {right_border_position.x} / 2 =\n= {center_top.x}")
     reach_point(center_top)
 
 if __name__ == "__main__":
