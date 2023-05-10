@@ -1,5 +1,9 @@
 from dataclasses import dataclass
 
+import rospy
+from controller_manager_msgs.msg import ControllerState
+from controller_manager_msgs.srv import (ListControllers,
+                                         ListControllersResponse)
 
 '''
 UR Controllers list (from https://github.com/UniversalRobots/Universal_Robots_ROS_Driver/blob/master/ur_robot_driver/doc/controllers.md)
@@ -73,3 +77,12 @@ class UrControllersNames:
                                   forward_cartesian_traj_controller,
                                   pose_based_cartesian_traj_controller,
                                   joint_based_cartesian_traj_controller]
+    
+# Utility functions
+def list_controllers() -> ListControllersResponse:
+    list_controllers_service = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
+    response: ListControllersResponse = list_controllers_service.call()
+    elem: ControllerState
+    for elem in response.controller:
+        print(f"{elem.name}:{elem.state}")
+    return response
