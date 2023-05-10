@@ -16,7 +16,7 @@ from controller_manager_msgs.srv import (ListControllers,
                                          UnloadController,
                                          UnloadControllerRequest,
                                          UnloadControllerResponse)
-from geometry_msgs.msg import Vector3, WrenchStamped
+from geometry_msgs.msg import Vector3, WrenchStamped, Twist
 from moveit_commander.move_group import MoveGroupCommander
 from moveit_commander.roscpp_initializer import roscpp_initialize
 from robotiq_ft_sensor.srv import (sensor_accessor, sensor_accessorRequest,
@@ -95,7 +95,16 @@ class UrControllersNames:
                                   forward_cartesian_traj_controller,
                                   pose_based_cartesian_traj_controller,
                                   joint_based_cartesian_traj_controller]
-    
+
+@dataclass
+class Movement:
+    UP = 1
+    DOWN = 2
+    FORWARD = 3
+    BACKWARD = 4
+    RIGHT = 5
+    LEFT = 6
+
 # Utility functions
 def list_controllers() -> ListControllersResponse:
     list_controllers_service = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
@@ -182,20 +191,26 @@ def wait_until_contact(direction: int):
     global out_contact_threshold
     global speed
     buffer = collections.deque(maxlen=15)
-    if direction not in range(1, 5):
-        print("Error. No valid direction. Trying stopping all")
+    if direction not in range(1, 7):
+        rospy.logwarn("No valid direction. Trying stopping all")
         movement.linear = Vector3(0, 0, 0)
         publisher.publish(movement)
         return
 
-    if direction == 1:
+    if direction == Movement.FORWARD:
         movement.linear = Vector3(0, -speed, 0)
-    elif direction == 2:
+    elif direction == Movement.BACKWARD:
         movement.linear = Vector3(0, speed, 0)
-    elif direction == 3:
+    elif direction == Movement.RIGHT:
         movement.linear = Vector3(-speed, 0, 0)
-    else:
+    elif direction == Movement.LEFT:
         movement.linear = Vector3(speed, 0, 0)
+    elif direction == Movement.UP:
+        movement.linear = Vector3(0, 0, -speed)
+    elif direction == Movement.DOWN:
+        movement.linear = Vector3(0, 0, speed)
+    else:
+        rospy.logwarn("Unable to detect movement direction!")
     
     # Wait for contact detection
     while True:
@@ -242,7 +257,7 @@ def wait_until_contact(direction: int):
 
 # Global variables
 speed: float
-movement: Vector3
+movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
 out_contact_threshold: float = 0.7
@@ -253,6 +268,8 @@ pause_contact_detection: bool = False
 message_buffer = collections.deque(maxlen=15)
 
 def main():
+
+    global movement
 
     # Initialize node and shutdown function
     rospy.init_node("place_ontop")
@@ -281,7 +298,23 @@ def main():
         pass
     # Publish to twist controller topic and set rospin rate
     publisher = rospy.Publisher("/twist_controller/command", Twist, queue_size=1)
-    rate = rospy.Rate(1000)
+    # Wait until a node is connected
+    while not publisher.get_num_connections() > 0:
+        rospy.logwarn("No active connections at the moment. Waiting for connections . . . ")
+        rospy.sleep(0.5)
+
+    zero_ft_sensor()
+
+    # Start moving robot
+
+    # Move down till contact
+    movement = Twist()
+    movement.angular = Vector3(0, 0, 0)
+    movement.linear = Vector3(0, 0, speed) # Move down
+    publisher.publish(movement)
+    wait_until_contact(Movement.DOWN)
+    # Save position
+    top_position = move_group.get_current_pose().pose.position
 
 
 if __name__ == "__main__":
