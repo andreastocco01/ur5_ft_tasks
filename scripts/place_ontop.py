@@ -5,6 +5,7 @@ from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import (ListControllers,
                                          ListControllersResponse,
                                          LoadController, LoadControllerRequest,
+                                         UnloadControllerRequest, UnloadControllerResponse, UnloadController,
                                          LoadControllerResponse)
 
 '''
@@ -94,3 +95,8 @@ def load_controller(controller_name: str) -> LoadControllerResponse:
     request = LoadControllerRequest(controller_name)
     response: LoadControllerResponse =load_controller_service.call(request)
     return response
+
+def unload_controller(controller_name: str) -> UnloadControllerResponse:
+    load_controller_service = rospy.ServiceProxy("/controller_manager/unload_controller", UnloadController)
+    request = UnloadControllerRequest(controller_name)
+    response: UnloadControllerResponse = load_controller_service.call(request)
