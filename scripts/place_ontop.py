@@ -3,7 +3,9 @@ from dataclasses import dataclass
 import rospy
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import (ListControllers,
-                                         ListControllersResponse)
+                                         ListControllersResponse,
+                                         LoadController, LoadControllerRequest,
+                                         LoadControllerResponse)
 
 '''
 UR Controllers list (from https://github.com/UniversalRobots/Universal_Robots_ROS_Driver/blob/master/ur_robot_driver/doc/controllers.md)
@@ -85,4 +87,10 @@ def list_controllers() -> ListControllersResponse:
     elem: ControllerState
     for elem in response.controller:
         print(f"{elem.name}:{elem.state}")
+    return response
+
+def load_controller(controller_name: str) -> LoadControllerResponse:
+    load_controller_service = rospy.ServiceProxy("/controller_manager/load_controller", LoadController)
+    request = LoadControllerRequest(controller_name)
+    response: LoadControllerResponse =load_controller_service.call(request)
     return response
