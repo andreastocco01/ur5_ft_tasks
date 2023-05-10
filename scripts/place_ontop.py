@@ -277,7 +277,10 @@ def reach_point(point: Point):
 
 
 # Global variables
-speed: float
+speed: float = 0.01
+v_offset: float = 0.1
+h_offset: float = 0.05
+length_offset: float = 0.5
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
@@ -291,7 +294,14 @@ message_buffer = collections.deque(maxlen=15)
 
 def main():
 
+    
+    global speed
+    global v_offset
+    global h_offset
+    global length_offset
     global movement
+    global publisher
+    global move_group
 
     # Initialize node and shutdown function
     rospy.init_node("place_ontop")
@@ -338,6 +348,16 @@ def main():
     # Save position
     top_position = move_group.get_current_pose().pose.position
 
+    # Move up, forward and down
+    top_offset_position = top_position
+    top_offset_position.z += v_offset
+    reach_point(top_offset_position) # Move UP offset
+    forward_offset_position = top_offset_position
+    forward_offset_position.y += length_offset / 2
+    reach_point(forward_offset_position) # Move forward
+    down_offset_position = forward_offset_position
+    down_offset_position.z -= v_offset * 2
+    reach_point(down_offset_position) # Move down
 
 if __name__ == "__main__":
     try:
