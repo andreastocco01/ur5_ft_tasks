@@ -1,4 +1,6 @@
+import os
 from dataclasses import dataclass
+from typing import List
 
 import rospy
 from controller_manager_msgs.msg import ControllerState
@@ -12,8 +14,10 @@ from controller_manager_msgs.srv import (ListControllers,
                                          UnloadController,
                                          UnloadControllerRequest,
                                          UnloadControllerResponse)
+from geometry_msgs.msg import Vector3
 from robotiq_ft_sensor.srv import (sensor_accessor, sensor_accessorRequest,
                                    sensor_accessorResponse)
+from rospy import Publisher
 
 '''
 UR Controllers list (from https://github.com/UniversalRobots/Universal_Robots_ROS_Driver/blob/master/ur_robot_driver/doc/controllers.md)
@@ -124,3 +128,19 @@ def zero_ft_sensor():
         return response
     except rospy.service.ServiceException:
         rospy.logwarn("Unable to connect to /robotiq_ft_sensor_acc and zero f/t sensor")
+
+def shutdown():
+    global movement
+    global publisher
+    rospy.logwarn("Initiating inner_border_finder shutdown")
+    movement.linear = Vector3(0, 0, 0)
+    publisher.publish(movement)
+    switch_controller(
+        start_controllers=[UrControllersNames.scaled_pos_joint_traj_controller],
+        stop_controllers=[UrControllersNames.twist_controller]
+    )
+    os._exit(1) #Kill parent process
+
+# Global variables
+movement: Vector3
+publisher: Publisher
