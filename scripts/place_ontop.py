@@ -266,6 +266,22 @@ def main():
     move_group.set_max_velocity_scaling_factor(0.01)
     move_group.set_max_acceleration_scaling_factor(0.01)
     
+    # Subscribe to robotiq sensor topic
+    subscriber = rospy.Subscriber("robotiq_ft_wrench", WrenchStamped, detect_contact)
+
+    # Load the correct controller
+    load_controller(UrControllersNames.twist_controller)
+    switch_controller(
+        start_controllers=[UrControllersNames.twist_controller],
+        stop_controllers=[UrControllersNames.scaled_pos_joint_traj_controller]
+    )
+
+    # Check that a /twist_controller/command topic exists
+    while not rospy.core.is_topic("/twist_controller/command"):
+        pass
+    # Publish to twist controller topic and set rospin rate
+    publisher = rospy.Publisher("/twist_controller/command", Twist, queue_size=1)
+    rate = rospy.Rate(1000)
 
 
 if __name__ == "__main__":
