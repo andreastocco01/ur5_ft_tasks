@@ -370,10 +370,10 @@ def main():
     up_offset_position = forward_border_position
     up_offset_position.z += v_offset * 2
     reach_point(up_offset_position) # Move UP
-    backward_offset_position = up_offset_position
-    backward_offset_position.y -= length_offset
-    reach_point(backward_offset_position) # Move BACK
-    down_offset_position = backward_offset_position
+    left_offset_position = up_offset_position
+    left_offset_position.y -= length_offset
+    reach_point(left_offset_position) # Move BACK
+    down_offset_position = left_offset_position
     down_offset_position.z -= v_offset * 2
     reach_point(down_offset_position)
 
@@ -408,6 +408,22 @@ def main():
     right_border_position = move_group.get_current_pose().pose.position
 
     # Move up, left, down
+    up_offset_position = right_border_position
+    up_offset_position.z += v_offset * 2
+    reach_point(up_offset_position) # Move UP
+    left_offset_position = up_offset_position
+    left_offset_position.x -= h_offset * 2
+    reach_point(left_offset_position) # Move left
+    down_offset_position = left_offset_position
+    down_offset_position.z -= v_offset * 2
+    reach_point(down_offset_position) # Move down
+
+    # Move right till contact
+    movement.linear = Vector3(speed, 0, 0)
+    publisher.publish(movement)
+    wait_until_contact(Movement.RIGHT)
+    # Save position
+    left_border_position = move_group.get_current_pose().pose.position
 
 if __name__ == "__main__":
     try:
