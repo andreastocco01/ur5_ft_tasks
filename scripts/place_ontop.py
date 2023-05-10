@@ -1,9 +1,9 @@
 import collections
 import os
-from dataclasses import dataclass
 import sys
+from dataclasses import dataclass
 from typing import List
-from moveit_commander.roscpp_initializer import roscpp_initialize
+
 import rospy
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import (ListControllers,
@@ -17,6 +17,8 @@ from controller_manager_msgs.srv import (ListControllers,
                                          UnloadControllerRequest,
                                          UnloadControllerResponse)
 from geometry_msgs.msg import Vector3, WrenchStamped
+from moveit_commander.move_group import MoveGroupCommander
+from moveit_commander.roscpp_initializer import roscpp_initialize
 from robotiq_ft_sensor.srv import (sensor_accessor, sensor_accessorRequest,
                                    sensor_accessorResponse)
 from rospy import Publisher
@@ -258,7 +260,13 @@ def main():
     #Initialize MoveIt
     roscpp_initialize(sys.argv)
 
-    pass
+    # Create a new moveit movegroup commander for arm group
+    group_name = "ur5_arm"
+    move_group = MoveGroupCommander(group_name)
+    move_group.set_max_velocity_scaling_factor(0.01)
+    move_group.set_max_acceleration_scaling_factor(0.01)
+    
+
 
 if __name__ == "__main__":
     try:
