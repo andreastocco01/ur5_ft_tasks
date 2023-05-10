@@ -1,8 +1,9 @@
 import collections
 import os
 from dataclasses import dataclass
+import sys
 from typing import List
-
+from moveit_commander.roscpp_initializer import roscpp_initialize
 import rospy
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import (ListControllers,
@@ -250,6 +251,13 @@ pause_contact_detection: bool = False
 message_buffer = collections.deque(maxlen=15)
 
 def main():
+
+    # Initialize node and shutdown function
+    rospy.init_node("place_ontop")
+    rospy.on_shutdown(shutdown)
+    #Initialize MoveIt
+    roscpp_initialize(sys.argv)
+
     pass
 
 if __name__ == "__main__":
