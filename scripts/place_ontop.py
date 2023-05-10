@@ -425,6 +425,17 @@ def main():
     # Save position
     left_border_position = move_group.get_current_pose().pose.position
 
+    # Move up
+    up_offset_position = left_border_position
+    up_offset_position.z += v_offset * 2
+    reach_point(up_offset_position) # Move UP
+
+    # Calculate center x, y
+    center_top = up_offset_position
+    center_top.x = (left_border_position.x + left_border_position.x)/2
+    center_top.y = fb_center.y
+    reach_point(center_top)
+
 if __name__ == "__main__":
     try:
         main()
