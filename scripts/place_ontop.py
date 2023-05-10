@@ -1,3 +1,4 @@
+import collections
 import os
 from dataclasses import dataclass
 from typing import List
@@ -14,7 +15,7 @@ from controller_manager_msgs.srv import (ListControllers,
                                          UnloadController,
                                          UnloadControllerRequest,
                                          UnloadControllerResponse)
-from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Vector3, WrenchStamped
 from robotiq_ft_sensor.srv import (sensor_accessor, sensor_accessorRequest,
                                    sensor_accessorResponse)
 from rospy import Publisher
@@ -141,6 +142,109 @@ def shutdown():
     )
     os._exit(1) #Kill parent process
 
+def detect_contact(message: WrenchStamped):
+    global in_contact
+    global pause_contact_detection
+    global in_contact_threshold
+    global message_buffer
+    message_buffer.append(message)
+    if len(message_buffer) < 15:
+        return
+    # Check if contact detection is paused
+    if pause_contact_detection:
+        return
+
+    # DEBUG
+    #print(f"force detected: |{abs(force_detected.x)}|, |{abs(force_detected.y)}|")
+    
+    # Check if everyone of the last 15 packets are in contact
+    for packet in message_buffer:
+        if not check_contact_message(packet):
+            in_contact = False
+            return
+    in_contact = True
+    rospy.loginfo("Contact detected.")
+
+def check_contact_message(message: WrenchStamped):
+    force_detected = message.wrench.force
+    if abs(force_detected.x) > in_contact_threshold or abs(force_detected.y)  > in_contact_threshold:
+        return True
+    return False
+
+def wait_until_contact(direction: int):
+    global publisher
+    global movement
+    global in_contact
+    global pause_contact_detection
+    global out_contact_threshold
+    global speed
+    buffer = collections.deque(maxlen=15)
+    if direction not in range(1, 5):
+        print("Error. No valid direction. Trying stopping all")
+        movement.linear = Vector3(0, 0, 0)
+        publisher.publish(movement)
+        return
+
+    if direction == 1:
+        movement.linear = Vector3(0, -speed, 0)
+    elif direction == 2:
+        movement.linear = Vector3(0, speed, 0)
+    elif direction == 3:
+        movement.linear = Vector3(-speed, 0, 0)
+    else:
+        movement.linear = Vector3(speed, 0, 0)
+    
+    # Wait for contact detection
+    while True:
+        if in_contact:
+            break
+    # Pause contact detection
+    pause_contact_detection = True
+    # DEBUG
+    rospy.logwarn("CONTACT DETECTED! WAIT FOR EXIT CONDITION!")
+    # Move back until contact is no longer detected
+    publisher.publish(movement)
+    # DEBUG
+    rospy.loginfo("Starting moving back.")
+
+    # Wait for contact exit
+    while True:
+        message: WrenchStamped = rospy.wait_for_message("robotiq_ft_wrench", WrenchStamped)
+        buffer.append(message)
+        if len(buffer) < 15:
+            continue # Contiunue appending messages
+
+        # If 15 messages collected
+        for packet in buffer:
+            if check_contact_message(packet):
+                in_contact = True
+                break
+            in_contact = False
+
+        # If all packets are not registering contact
+        if not in_contact:
+            break
+
+        # continue checking
+    
+    # Stop moving
+    movement.linear = Vector3(0, 0, 0)
+    publisher.publish(movement)
+    # DEBUG
+    rospy.logwarn("CONTACT NO LONGER DETECTED. RESUMING NORMAL OPERATION")
+    # Reset force sensor
+    zero_ft_sensor()
+    # Resume contact detection
+    pause_contact_detection = False
+
 # Global variables
+speed: float
 movement: Vector3
 publisher: Publisher
+in_contact_threshold: float = 2
+out_contact_threshold: float = 0.7
+# Semaphores for contact detection
+in_contact: bool = False
+pause_contact_detection: bool = False
+# Buffer
+message_buffer = collections.deque(maxlen=15)
