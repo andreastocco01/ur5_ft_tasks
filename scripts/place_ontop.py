@@ -282,15 +282,15 @@ def reach_point(point: Point):
 # TODO: Fix signs of offsets - apparently moveit and twist controller have different reference frames
 # Global variables
 speed: float = 0.01
-v_offset: float = 0.04
-h_offset: float = -0.25 #TODO: fix sign
+v_offset: float = 0.04 # Altezza
+h_offset: float = -0.15 #TODO: fix sign
 length_offset: float = -0.25 #TODO: fix sign
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
 out_contact_threshold: float = 0.7
 move_group: MoveGroupCommander
-moveit_speed = 0.8
+moveit_speed = 0.5
 # Semaphores for contact detection
 in_contact: bool = False
 pause_contact_detection: bool = False
