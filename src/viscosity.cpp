@@ -48,7 +48,7 @@ void mySigintHandler(int sig) {
 }
 
 double calculate_viscosity(double force, double velocity) {
-    return force / (2 * 0.06 * 0.04 * 0.004 * velocity);
+    return force / (2 * (0.06 - 0.01) * 0.04 * 0.004 * velocity); // l'area del rettangolo immerso e' circa 0.05 * 0.04
 }
 
 int main(int argc, char** argv) {
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
     current_pose = move_group.getCurrentPose("robotiq_ft_frame_id"); // this is the end-effector!!!
     target_pose.position.x = current_pose.pose.position.x;
     target_pose.position.y = current_pose.pose.position.y;
-    target_pose.position.z = current_pose.pose.position.z - 0.177;
+    target_pose.position.z = current_pose.pose.position.z - 0.23;
     target_pose.orientation = current_pose.pose.orientation;
     move_group.setPoseTarget(target_pose);
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
@@ -128,16 +128,8 @@ int main(int argc, char** argv) {
     ros::Rate rate(100);
     std::vector<geometry_msgs::Vector3> vec;
     ros::Time startTime = ros::Time::now();
-    while(ros::ok()) {
+    while(ros::ok() && (ros::Time::now() - startTime).toSec() < 6) {
         publisher.publish(move);
-
-        // Check if the desired sleep duration has elapsed
-        ros::Duration duration = ros::Time::now() - startTime;
-        if (duration.toSec() >= 6) {
-            // Break the loop and exit
-            break;
-        }
-
         ros::spinOnce();
         vec.push_back(torque);
         rate.sleep();
@@ -145,7 +137,8 @@ int main(int argc, char** argv) {
     double force = mean(vec).z;
     double viscosity = calculate_viscosity(force, velocity);
 
-    ROS_INFO("Mean: %f\nStandard deviation: %f", mean(vec).z, standard_deviation(vec, mean(vec)).z);
+    ROS_INFO("Mean: %f, Standard deviation: %f", mean(vec).z, standard_deviation(vec, mean(vec)).z);
+    ROS_INFO("Measurements: %d", vec.size());
     ROS_INFO("Viscosity: %f", viscosity);
 
     mySigintHandler(SIGINT);
