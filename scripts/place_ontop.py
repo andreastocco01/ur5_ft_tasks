@@ -257,6 +257,7 @@ def wait_until_contact(direction: int):
     pause_contact_detection = False
 
 def reach_point(point: Point):
+    global moveit_speed
     # Set target pose
     target_pose = move_group.get_current_pose().pose
     target_pose.position = point
@@ -267,26 +268,29 @@ def reach_point(point: Point):
     )
     # Reach position 
     move_group.set_pose_target(target_pose)
+    move_group.set_max_velocity_scaling_factor(moveit_speed)
     move_group.go(wait=True)
     move_group.stop()
-    move_group.clear_pose_targets()
+    #move_group.clear_pose_targets()
     # Restore contollers
     switch_controller(
         start_controllers=[UrControllersNames.twist_controller],
         stop_controllers=[UrControllersNames.scaled_pos_joint_traj_controller]
     )
+    rospy.logerr(f"Volevo raggingere {target_pose.position}\nHo raggiunto {move_group.get_current_pose().pose.position}")
 
 # TODO: Fix signs of offsets - apparently moveit and twist controller have different reference frames
 # Global variables
 speed: float = 0.01
-v_offset: float = 0.08
-h_offset: float = -0.15 #TODO: fix sign
-length_offset: float = -0.3 #TODO: fix sign
+v_offset: float = 0.04
+h_offset: float = -0.25 #TODO: fix sign
+length_offset: float = -0.25 #TODO: fix sign
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
 out_contact_threshold: float = 0.7
 move_group: MoveGroupCommander
+moveit_speed = 0.8
 # Semaphores for contact detection
 in_contact: bool = False
 pause_contact_detection: bool = False
@@ -313,8 +317,9 @@ def main():
     # Create a new moveit movegroup commander for arm group
     group_name = "ur5_arm"
     move_group = MoveGroupCommander(group_name)
-    move_group.set_max_velocity_scaling_factor(0.01)
-    move_group.set_max_acceleration_scaling_factor(0.01)
+    name = move_group.get_planning_frame()
+    print(name)
+    
     
     # Subscribe to robotiq sensor topic
     subscriber = rospy.Subscriber("robotiq_ft_wrench", WrenchStamped, detect_contact)
@@ -351,15 +356,13 @@ def main():
     rospy.loginfo(f"TOP POSITION:\n{top_position}")
 
     # Move up, forward and down
-    up_offset_position = top_position
-    up_offset_position.z += v_offset
-    reach_point(up_offset_position) # Move UP offset
-    forward_offset_position = up_offset_position
-    forward_offset_position.y += length_offset / 2
-    reach_point(forward_offset_position) # Move forward
-    down_offset_position = forward_offset_position
-    down_offset_position.z -= v_offset * 2
-    reach_point(down_offset_position) # Move down
+    current_position = top_position
+    current_position.z += v_offset
+    reach_point(current_position) # Move UP offset
+    current_position.y += length_offset / 2
+    reach_point(current_position) # Move forward
+    current_position.z -= v_offset * 2
+    reach_point(current_position) # Move down
 
     # Move backward till contact
     movement.linear = Vector3(0, -speed, 0)
@@ -370,15 +373,13 @@ def main():
     rospy.loginfo(f"FORDWARD BORDER POSITION:\n{forward_border_position}")
 
     # Move up, backward, down
-    up_offset_position = forward_border_position
-    up_offset_position.z += v_offset * 2
-    reach_point(up_offset_position) # Move UP
-    left_offset_position = up_offset_position
-    left_offset_position.y -= length_offset
-    reach_point(left_offset_position) # Move BACK
-    down_offset_position = left_offset_position
-    down_offset_position.z -= v_offset * 2
-    reach_point(down_offset_position)
+    current_position = copy.deepcopy(forward_border_position)
+    current_position.z += v_offset * 2
+    reach_point(current_position) # Move UP
+    current_position.y -= length_offset
+    reach_point(current_position) # Move BACK
+    current_position.z -= v_offset * 2
+    reach_point(current_position)
 
     # Move forward till contact
     movement.linear = Vector3(0, speed, 0)
@@ -389,21 +390,21 @@ def main():
     rospy.loginfo(f"BACKWARD BORDER POSITION:\n{backward_border_position}")
 
     # Move up, center
-    up_offset_position = backward_border_position
-    up_offset_position.z += v_offset * 2
-    reach_point(up_offset_position) # Move UP
-    fb_center = up_offset_position
-    fb_center.y = (forward_border_position.y + backward_border_position.y) / 2
-    reach_point(fb_center) # Move center
-    rospy.loginfo(f"CENTER FB POSITION:\n{fb_center}")
+    current_position = copy.deepcopy(backward_border_position)
+    current_position.z += v_offset * 2
+    reach_point(current_position) # Move UP
+    current_position.y = (backward_border_position.y + forward_border_position.y)/2.0
+    y_center = copy.deepcopy(current_position.y)
+    rospy.loginfo(f"[{backward_border_position.y}], [{forward_border_position.y}] => [{current_position.y}]")
+    reach_point(current_position) # Move center
+    rospy.loginfo(f"CENTER FB POSITION:\n{current_position}")
+    
 
     # Move right, down
-    right_offset_position = fb_center
-    right_offset_position.x += h_offset
-    reach_point(right_offset_position) # Move right
-    down_offset_position = right_offset_position
-    down_offset_position.z -= v_offset * 2
-    reach_point(down_offset_position) # Move down
+    current_position.x += h_offset
+    reach_point(current_position) # Move right
+    current_position.z -= v_offset * 2
+    reach_point(current_position) # Move down
 
     # Move left till contact
     movement.linear = Vector3(-speed, 0, 0)
@@ -414,15 +415,13 @@ def main():
     rospy.loginfo(f"RIGHT BORDER POSITION:\n{right_border_position}")
 
     # Move up, left, down
-    up_offset_position = right_border_position
-    up_offset_position.z += v_offset * 2
-    reach_point(up_offset_position) # Move UP
-    left_offset_position = up_offset_position
-    left_offset_position.x -= h_offset * 2
-    reach_point(left_offset_position) # Move left
-    down_offset_position = left_offset_position
-    down_offset_position.z -= v_offset * 2
-    reach_point(down_offset_position) # Move down
+    current_position = copy.copy(right_border_position)
+    current_position.z += v_offset * 2
+    reach_point(current_position) # Move UP
+    current_position.x -= h_offset * 2
+    reach_point(current_position) # Move left
+    current_position.z -= v_offset * 2
+    reach_point(current_position) # Move down
 
     # Move right till contact
     movement.linear = Vector3(speed, 0, 0)
@@ -433,16 +432,15 @@ def main():
     rospy.loginfo(f"LEFT BORDER POSITION:\n{forward_border_position}")
 
     # Move up
-    up_offset_position = left_border_position
-    up_offset_position.z += v_offset * 2
-    reach_point(up_offset_position) # Move UP
+    current_position = copy.copy(left_border_position)
+    current_position.z += v_offset * 2
+    reach_point(current_position) # Move UP
 
     # Calculate center x, y
-    center_top = up_offset_position
-    center_top.x = (left_border_position.x + right_border_position.x)/2.0
-    center_top.y = fb_center.y
-    rospy.loginfo(f"Desidered position X: {left_border_position.x} + {right_border_position.x} / 2 =\n= {center_top.x}")
-    reach_point(center_top)
+    current_position.x = (left_border_position.x + right_border_position.x)/2.0
+    current_position.y = y_center
+    rospy.loginfo(f"Desidered position X: {left_border_position.x} + {right_border_position.x} / 2 =\n= {current_position.x}")
+    reach_point(current_position)
 
 if __name__ == "__main__":
     try:
