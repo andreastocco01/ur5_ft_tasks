@@ -8,6 +8,7 @@
 #include "robotiq_ft_sensor/sensor_accessor.h"
 #include <geometry_msgs/Twist.h>
 #include <ur5_ft_tasks/controllers.h>
+#include <math.h>
 #include <stdlib.h>
 #include <signal.h>
 
@@ -112,39 +113,18 @@ int main(int argc, char** argv) {
     move.angular = angular;
     publisher.publish(move);
 
-    int dx = 0;
-    int dy = 0;
-    int dz = 0;
-
-    double speedx = 0.0;
-    double speedy = 0.0;
-    double speedz = 0.0;
-
     ros::Rate rate(10);
     int alpha = 300;
     int threshold = 8;
     std::vector<geometry_msgs::PoseStamped> positions;
 
     while(ros::ok() && positions.size() < 2) {
-        if(force.x > threshold) dx = 1;
-        else if(force.x < -threshold) dx = -1;
-        else dx = 0;
-
-        if(force.y > threshold) dy = -1;
-        else if(force.y < -threshold) dy = 1;
-        else dy = 0;
-
-        if(force.z > threshold) dz = -1;
-        else if(force.z < -threshold) dz = 1;
-        else dz = 0;
-
-        if(dx != 0) speedx = force.x / alpha;
-        else if (dy != 0) speedy = force.y / alpha;
-        else if (dz != 0) speedz = force.z / alpha;
+        double module = sqrt(pow(force.x, 2) + pow(force.y, 2) + pow(force.z, 2));
+        if(module > threshold) {
+            linear = set(force.x/alpha, -force.y/alpha, -force.z/alpha);
+        }
         else {
-            speedx = 0.0;
-            speedy = 0.0;
-            speedz = 0.0;
+            linear = set(0, 0, 0);
         }
 
         if(std::abs(torque.z) > 2.5) {
@@ -154,7 +134,6 @@ int main(int argc, char** argv) {
         }
 
         // linear is (0, 0, 0) if force < threshold or a position is saved
-        linear = set(dx * std::abs(speedx), dy * std::abs(speedy), dz * std::abs(speedz));
         move.linear = linear;
 
         publisher.publish(move);
