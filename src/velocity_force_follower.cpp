@@ -43,7 +43,7 @@ void mySigintHandler(int sig) {
 
     // All the default sigint handler does is call shutdown()
     switch_controllers(switch_client, switch_srv, (char*)"scaled_pos_joint_traj_controller", (char*)"twist_controller");
-
+    ros::Duration(30).sleep(); // wait for consenting the task_positions subscriber to retrieve data
     ros::shutdown();
 }
 
@@ -91,6 +91,7 @@ int main(int argc, char** argv) {
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
+    ros::Publisher pos_publisher = node.advertise<geometry_msgs::PoseStamped>("task_positions", 2);
     ros::ServiceClient load_client = node.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
     switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 
@@ -160,6 +161,10 @@ int main(int argc, char** argv) {
         ros::spinOnce();
         rate.sleep();
     }
+
+    pos_publisher.publish(positions[0]);
+    pos_publisher.publish(positions[1]);
+
     mySigintHandler(SIGINT);
     return 0;
 }
