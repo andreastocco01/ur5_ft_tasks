@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include "robotiq_ft_sensor/ft_sensor.h"
@@ -52,6 +54,17 @@ int main(int argc, char** argv) {
     // This must be set after the first NodeHandle is created.
     signal(SIGINT, mySigintHandler);
 
+    static const std::string PLANNING_GROUP_ARM = "ur5_arm";
+    moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP_ARM);
+    moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+    moveit::planning_interface::PlanningSceneInterface current_scene;
+
+    // Move to home position
+    move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
+    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
+    move_group.move();
+
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
@@ -99,10 +112,14 @@ int main(int argc, char** argv) {
         else if(force.z < -threshold) dz = 1;
         else dz = 0;
 
-        if (dx != 0) speedx = force.x / alpha;
+        if(dx != 0) speedx = force.x / alpha;
         else if (dy != 0) speedy = force.y / alpha;
         else if (dz != 0) speedz = force.z / alpha;
-        else speedx, speedy, speedz = 0.0;
+        else {
+            speedx = 0.0;
+            speedy = 0.0;
+            speedz = 0.0;
+        }
 
         linear = set(dx * std::abs(speedx), dy * std::abs(speedy), dz * std::abs(speedz));
         move.linear = linear;
