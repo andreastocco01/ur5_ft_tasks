@@ -189,7 +189,6 @@ def wait_until_contact(direction: int):
     global movement
     global in_contact
     global pause_contact_detection
-    global out_contact_threshold
     global speed
     buffer = collections.deque(maxlen=15)
     if direction not in range(1, 7):
@@ -228,7 +227,7 @@ def wait_until_contact(direction: int):
 
     # Wait for contact exit
     while True:
-        message: WrenchStamped = rospy.wait_for_message("robotiq_ft_wrench", WrenchStamped)
+        message: WrenchStamped = rospy.wait_for_message("robotiq_ft_wrench", WrenchStamped) # type: ignore
         buffer.append(message)
         if len(buffer) < 15:
             continue # Contiunue appending messages
@@ -288,7 +287,7 @@ length_offset: float = -0.25 #TODO: fix sign
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 2
-out_contact_threshold: float = 0.7
+#out_contact_threshold: float = 0.7
 move_group: MoveGroupCommander
 moveit_speed = 0.5
 # Semaphores for contact detection
