@@ -387,7 +387,7 @@ class PickPlaceTask:
 
         # Calculate center x, y
         current_position.x = (self.left_border_position.x + self.right_border_position.x)/2.0
-        current_position.y = (self.top_border_position.y + self.bottom_border_position.x)/2
+        current_position.y = (self.top_border_position.y + self.bottom_border_position.y)/2
         self.reach_point(current_position)
     
     

@@ -122,7 +122,7 @@ class UrControllersNames:
     """
 
     # ----------------------------------------------------
-    all_commanding_controllers: List[str] = [
+    all_commanding_controllers = [
         scaled_pos_joint_traj_controller,
         joint_group_vel_controller,
         twist_controller,

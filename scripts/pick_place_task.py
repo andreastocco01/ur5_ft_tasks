@@ -33,6 +33,8 @@ def shutdown() -> None:
 
 def main():
 
+    global twist_publisher
+
     # Initialize node and shutdown function
     rospy.init_node("pick_place")
     rospy.on_shutdown(shutdown)
@@ -88,8 +90,14 @@ def main():
     # Move bottom border
     task.move_bottom_border()
 
+    # Find bottom border
+    task.find_bottom_border()
+
     # Move top/bottom center
     task.move_top_bottom_center()
+
+    # Move right border
+    task.move_right_border()
 
     # Find right border
     task.find_right_border()
@@ -102,7 +110,7 @@ def main():
 
     # Move center
     task.move_center()
-    
+
 
 if __name__ == "__main__":
     try:
