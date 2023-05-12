@@ -47,15 +47,14 @@ void mySigintHandler(int sig) {
     ros::shutdown();
 }
 
-void feedback(geometry_msgs::Twist move) {
-    ros::Time startTime = ros::Time::now();
-    while((ros::Time::now() - startTime).toSec() < 0.1) {
-        move.linear = set(0, 0, 0.4);
-    }
-    startTime = ros::Time::now();
-    while((ros::Time::now() - startTime).toSec() < 0.1) {
-        move.linear = set(0, 0, -0.4);
-    }
+void feedback(geometry_msgs::Twist &move, ros::Publisher &publisher) {
+    move.linear = set(0, 0, 0.05);
+    publisher.publish(move);
+    ros::Duration(0.1).sleep();
+
+    move.linear = set(0, 0, -0.05);
+    publisher.publish(move);
+    ros::Duration(0.1).sleep();
 }
 
 int main(int argc, char** argv) {
@@ -65,12 +64,25 @@ int main(int argc, char** argv) {
     // This must be set after the first NodeHandle is created.
     signal(SIGINT, mySigintHandler);
 
+    // ROS spinning must be running for the MoveGroupInterface to get information
+    // about the robot's state. One way to do this is to start an AsyncSpinner
+    // beforehand.
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
+
+    // MoveIt operates on sets of joints called "planning groups" and stores them in an object called
+    // the `JointModelGroup`. Throughout MoveIt the terms "planning group" and "joint model group"
+    // are used interchangably.
     static const std::string PLANNING_GROUP_ARM = "ur5_arm";
+
+    // The :planning_interface:`MoveGroupInterface` class can be easily
+    // setup using just the name of the planning group you would like to control and plan for.
     moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP_ARM);
+
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     moveit::planning_interface::PlanningSceneInterface current_scene;
 
-    // Move to home position
+    // 1. move to home position
     move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
     bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
@@ -111,7 +123,7 @@ int main(int argc, char** argv) {
     int threshold = 8;
     std::vector<geometry_msgs::PoseStamped> positions;
 
-    while(ros::ok()) {
+    while(ros::ok() && positions.size() < 2) {
         if(force.x > threshold) dx = 1;
         else if(force.x < -threshold) dx = -1;
         else dx = 0;
@@ -133,9 +145,10 @@ int main(int argc, char** argv) {
             speedz = 0.0;
         }
 
-        if(std::abs(torque.z) > 20) {
+        if(std::abs(torque.z) > 2.5) {
             positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
-            feedback(move);
+            feedback(move, publisher);
+            ROS_INFO("Acquired position");
         }
 
         // linear is (0, 0, 0) if force < threshold or a position is saved
@@ -147,5 +160,6 @@ int main(int argc, char** argv) {
         ros::spinOnce();
         rate.sleep();
     }
+    mySigintHandler(SIGINT);
     return 0;
 }
