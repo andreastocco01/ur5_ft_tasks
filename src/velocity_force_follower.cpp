@@ -11,7 +11,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <ur5_ft_tasks/utils.h>
 
 geometry_msgs::Vector3 force, torque;
 ros::ServiceClient switch_client;
@@ -114,24 +113,15 @@ int main(int argc, char** argv) {
     move.angular = angular;
     publisher.publish(move);
 
-    ros::Rate rate(10);
+    ros::Rate rate(100);
     int alpha = 300;
     int threshold = 8;
     std::vector<geometry_msgs::PoseStamped> positions;
-    std::vector<geometry_msgs::Vector3> forces;
 
     while(ros::ok() && positions.size() < 2) {
-        forces.push_back(force);
-        if(forces.size() == 10) {
-            geometry_msgs::Vector3 f = mean(forces);
-            double module = sqrt(pow(f.x, 2) + pow(f.y, 2) + pow(f.z, 2));
-            if(module > threshold) {
-                linear = set(force.x/alpha, -force.y/alpha, -force.z/alpha);
-            }
-            else {
-                linear = set(0, 0, 0);
-            }
-            forces.clear();
+        double module = sqrt(pow(force.x, 2) + pow(force.y, 2) + pow(force.z, 2));
+        if(module > threshold) {
+            linear = set(force.x/alpha, -force.y/alpha, -force.z/alpha);
         } else {
             linear = set(0, 0, 0);
         }

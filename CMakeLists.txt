@@ -216,7 +216,7 @@ add_executable(position_force_follower src/position_force_follower.cpp)
 target_link_libraries(position_force_follower ${catkin_LIBRARIES})
 
 add_executable(velocity_force_follower src/velocity_force_follower.cpp)
-target_link_libraries(velocity_force_follower ${catkin_LIBRARIES} controllers utils)
+target_link_libraries(velocity_force_follower ${catkin_LIBRARIES} controllers)
 
 add_executable(fake_sensor src/fake_sensor.cpp)
 target_link_libraries(fake_sensor ${catkin_LIBRARIES})
