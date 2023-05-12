@@ -47,6 +47,17 @@ void mySigintHandler(int sig) {
     ros::shutdown();
 }
 
+void feedback(geometry_msgs::Twist move) {
+    ros::Time startTime = ros::Time::now();
+    while((ros::Time::now() - startTime).toSec() < 0.1) {
+        move.linear = set(0, 0, 0.4);
+    }
+    startTime = ros::Time::now();
+    while((ros::Time::now() - startTime).toSec() < 0.1) {
+        move.linear = set(0, 0, -0.4);
+    }
+}
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "velocity_force_follower");
     ros::NodeHandle node;
@@ -98,6 +109,7 @@ int main(int argc, char** argv) {
     ros::Rate rate(10);
     int alpha = 300;
     int threshold = 8;
+    std::vector<geometry_msgs::PoseStamped> positions;
 
     while(ros::ok()) {
         if(force.x > threshold) dx = 1;
@@ -121,6 +133,12 @@ int main(int argc, char** argv) {
             speedz = 0.0;
         }
 
+        if(std::abs(torque.z) > 20) {
+            positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
+            feedback(move);
+        }
+
+        // linear is (0, 0, 0) if force < threshold or a position is saved
         linear = set(dx * std::abs(speedx), dy * std::abs(speedy), dz * std::abs(speedz));
         move.linear = linear;
 
