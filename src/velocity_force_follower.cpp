@@ -3,6 +3,7 @@
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Vector3.h>
+#include <std_msgs/UInt16.h>
 #include "robotiq_ft_sensor/ft_sensor.h"
 #include "robotiq_ft_sensor/sensor_accessor.h"
 #include <geometry_msgs/Twist.h>
@@ -47,14 +48,13 @@ void mySigintHandler(int sig) {
     ros::shutdown();
 }
 
-void feedback(geometry_msgs::Twist &move, ros::Publisher &publisher) {
-    move.linear = set(0, 0, 0.05);
-    publisher.publish(move);
-    ros::Duration(0.1).sleep();
-
-    move.linear = set(0, 0, -0.05);
-    publisher.publish(move);
-    ros::Duration(0.1).sleep();
+void feedback(ros::Publisher &publisher) {
+    std_msgs::UInt16 x;
+    x.data = 120;
+    publisher.publish(x);
+    ros::Duration(0.5).sleep();
+    x.data = 180;
+    publisher.publish(x);
 }
 
 int main(int argc, char** argv) {
@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
     ros::Publisher pos_publisher = node.advertise<geometry_msgs::PoseStamped>("task_positions", 2);
+    ros::Publisher gripper_publisher = node.advertise<std_msgs::UInt16>("/gripper_control/servo_debug", 1);
     ros::ServiceClient load_client = node.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
     switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 
@@ -148,7 +149,7 @@ int main(int argc, char** argv) {
 
         if(std::abs(torque.z) > 2.5) {
             positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
-            feedback(move, publisher);
+            feedback(gripper_publisher);
             ROS_INFO("Acquired position");
         }
 
