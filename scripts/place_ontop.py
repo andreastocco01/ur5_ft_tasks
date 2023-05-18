@@ -159,20 +159,16 @@ def detect_contact(message: WrenchStamped):
     global in_contact
     global pause_contact_detection
     global in_contact_threshold
-    global message_buffer
-    message_buffer.append(message)
-    if len(message_buffer) < 15:
-        return
+    force_detected = message.wrench.force
     # Check if contact detection is paused
     if pause_contact_detection:
         return
 
     # DEBUG
-    #print(f"force detected: |{abs(force_detected.x)}|, |{abs(force_detected.y)}|")
+    print(f"force detected: |{abs(force_detected.x)}|, |{abs(force_detected.y)}|, |{abs(force_detected.z)}|")
     
     # Check if everyone of the last 15 packets are in contact
-    for packet in message_buffer:
-        if not check_contact_message(packet):
+    if not check_contact_message(message):
             in_contact = False
             return
     in_contact = True
@@ -180,7 +176,7 @@ def detect_contact(message: WrenchStamped):
 
 def check_contact_message(message: WrenchStamped):
     force_detected = message.wrench.force
-    if abs(force_detected.x) > in_contact_threshold or abs(force_detected.y)  > in_contact_threshold:
+    if abs(force_detected.x) > in_contact_threshold or abs(force_detected.y)  > in_contact_threshold or abs(force_detected.z) > in_contact_threshold:
         return True
     return False
 
@@ -271,7 +267,7 @@ def reach_point(point: Point):
     move_group.go(wait=True)
     move_group.stop()
     #move_group.clear_pose_targets()
-    # Restore contollers
+    # Restore contollers.y
     switch_controller(
         start_controllers=[UrControllersNames.twist_controller],
         stop_controllers=[UrControllersNames.scaled_pos_joint_traj_controller]
