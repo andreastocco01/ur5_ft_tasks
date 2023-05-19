@@ -46,36 +46,42 @@ int main(int argc, char** argv){
     ROS_INFO("Positions received");
 
     // Move to first position
-    positions[0].pose.position.z += 0.2;
+    positions[0].pose.position.z += 0.1;
     move_group.setPoseTarget(positions[0].pose);
     move_group.move();  // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // TODO: descend
-    positions[0].pose.position.z -= 0.2;
+    positions[0].pose.position.z -= 0.1;
     move_group.setPoseTarget(positions[0].pose);
     move_group.move();  // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // Close gripper
-    gripper_position.data = 110;
+    gripper_position.data = 45;
     gripper_publisher.publish(gripper_position);
+    sleep(2);
 
     // Move to previous position
-    positions[0].pose.position.z += 0.2;
+    positions[0].pose.position.z += 0.1;
     move_group.setPoseTarget(positions[0].pose);
     move_group.move();  // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // Move to second position
-    positions[1].pose.position.z += 0.2;
+    positions[1].pose.position.z += 0.1;
+    move_group.setPoseTarget(positions[1].pose);
+    move_group.move(); // Plan and execute movement waiting for success
+    move_group.clearPoseTargets(); // Clear all targets specified
+
+    positions[1].pose.position.z -= 0.7;
     move_group.setPoseTarget(positions[1].pose);
     move_group.move(); // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // Open gripper
-    gripper_position.data = 110;
-    gripper_publisher.publish(gripper_position);
+    //gripper_position.data = 110;
+    //gripper_publisher.publish(gripper_position);
     
     return 0;
 }
