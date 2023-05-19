@@ -46,7 +46,6 @@ void mySigintHandler(int sig) {
 
     // All the default sigint handler does is call shutdown()
     switch_controllers(switch_client, switch_srv, (char*)"scaled_pos_joint_traj_controller", (char*)"twist_controller");
-    ros::Duration(30).sleep(); // wait for consenting the task_positions subscriber to retrieve data
     ros::shutdown();
 }
 
@@ -115,13 +114,13 @@ int main(int argc, char** argv) {
     publisher.publish(move);
 
     ros::Rate rate(100);
-    int alpha = 300;
-    int threshold = 8;
+    int alpha = 200;
+    int threshold = 5;
     std::vector<geometry_msgs::PoseStamped> positions;
     std::vector<geometry_msgs::Vector3> forces;
 
     while(ros::ok() && positions.size() < 2) {
-        if(forces.size() < 10) {
+        if(forces.size() < 15) {
             forces.push_back(force);
         } else {
             forces.erase(forces.begin());
@@ -129,12 +128,12 @@ int main(int argc, char** argv) {
             geometry_msgs::Vector3 current = mean(forces);
             double module = sqrt(pow(current.x, 2) + pow(current.y, 2) + pow(current.z, 2));
             if(module > threshold) {
-                linear = set(force.x/alpha, -force.y/alpha, -force.z/alpha);
+                linear = set(current.x/alpha, -current.y/alpha, -current.z/alpha);
             } else {
                 linear = set(0, 0, 0);
             }
 
-            if(std::abs(torque.z) > 2.5) {
+            if(std::abs(torque.z) > 1) {
                 positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
                 feedback(gripper_publisher);
                 ROS_INFO("Acquired position");
