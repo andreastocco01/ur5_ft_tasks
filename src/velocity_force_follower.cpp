@@ -83,12 +83,6 @@ int main(int argc, char** argv) {
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     moveit::planning_interface::PlanningSceneInterface current_scene;
 
-    // 1. move to home position
-    move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
-    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
-    move_group.move();
-
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
@@ -97,6 +91,12 @@ int main(int argc, char** argv) {
     ros::ServiceClient load_client = node.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
     switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 
+    // 1. move to home position
+    move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
+    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
+    move_group.move();
+
     controller_manager_msgs::LoadController load_srv;
     load_controller(load_client, load_srv, (char*)"twist_controller");
     switch_controllers(switch_client, switch_srv, (char*)"twist_controller", (char*)"scaled_pos_joint_traj_controller");
@@ -104,6 +104,10 @@ int main(int argc, char** argv) {
     robotiq_ft_sensor::sensor_accessor srv;
 
     zero_sensor(srv, client);
+
+    std_msgs::UInt16 init;
+    init.data = 180;
+    gripper_publisher.publish(init);
 
     geometry_msgs::Twist move;
     geometry_msgs::Vector3 linear, angular;
