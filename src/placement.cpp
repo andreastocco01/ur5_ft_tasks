@@ -5,63 +5,71 @@
 #include <geometry_msgs/Point.h>
 #include <std_msgs/UInt16.h>
 
-namespace moveit_planner = moveit::planning_interface;
+using namespace moveit::planning_interface;
 
 const std::string PLANNING_GROUP_ARM = "ur5_arm";
 
+std::vector<geometry_msgs::PoseStamped> positions;
+
+void callback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
+    positions.push_back(*msg);
+}
+
 
 int main(int argc, char** argv){
-
-    // Gripper position message
-    std_msgs::UInt16 gripper_position;
 
     // Initialize node and get istance
     ros::init(argc, argv, "placer");
     ros::NodeHandle node;
 
-    // Init moveit
-    moveit_planner::MoveGroupInterface move_group(PLANNING_GROUP_ARM);
-    moveit_planner::MoveGroupInterface::Plan plan;
-    moveit_planner::PlanningSceneInterface scene;
-
-    // Setup topics
-    ros::Publisher gripper_publisher = node.advertise<std_msgs::UInt16>("/gripper_control/servo_debug", 1);
-    //ros::Subscriber pos_subscriber = node.subscribe("task_positions");
-
-    // Wait for message in /task_positions topic
-    geometry_msgs::PoseStampedConstPtr positionOne = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("task_positions");
-    // DEBUG: print position
-    ROS_INFO("Ricevuta posizione %f, %f, %f", positionOne->pose.position.x, positionOne->pose.position.y, positionOne->pose.position.z);
-
-    // Wait for message in /task_positions topic
-    geometry_msgs::PoseStampedConstPtr positionTwo = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("task_positions");
-    // DEBUG: print position
-    ROS_INFO("Ricevuta posizione %f, %f, %f", positionTwo->pose.position.x, positionTwo->pose.position.y, positionTwo->pose.position.z);
-
-
     // Starting Async rosSpin() for moveit
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    //  Move to home position
-    move_group.setNamedTarget("home");
-    move_group.move();
-    move_group.clearPoseTargets(); // Clear all targets specified
+    // Gripper position message
+    std_msgs::UInt16 gripper_position;
 
+    // Init moveit
+    MoveGroupInterface move_group(PLANNING_GROUP_ARM);
+    MoveGroupInterface::Plan plan;
+    PlanningSceneInterface scene;
 
-    // Move robot to first position
-    move_group.setPoseTarget(positionOne->pose);
+    // Setup topics
+    ros::Publisher gripper_publisher = node.advertise<std_msgs::UInt16>("/gripper_control/servo_debug", 1);
+    ros::Subscriber pos_subscriber = node.subscribe("task_positions", 2, callback);
+
+    // Wait for message in /task_positions topic
+    ROS_INFO("Waiting for positions");
+
+    while(positions.size() < 2);
+
+    ROS_INFO("Positions received");
+
+    // Move to first position
+    positions[0].pose.position.z += 0.2;
+    move_group.setPoseTarget(positions[0].pose);
     move_group.move();  // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // TODO: descend
+    positions[0].pose.position.z -= 0.2;
+    move_group.setPoseTarget(positions[0].pose);
+    move_group.move();  // Plan and execute movement waiting for success
+    move_group.clearPoseTargets(); // Clear all targets specified
 
     // Close gripper
     gripper_position.data = 110;
     gripper_publisher.publish(gripper_position);
 
-    // Move robot to second position
-    move_group.setPoseTarget(positionOne->pose);
+    // Move to previous position
+    positions[0].pose.position.z += 0.2;
+    move_group.setPoseTarget(positions[0].pose);
+    move_group.move();  // Plan and execute movement waiting for success
+    move_group.clearPoseTargets(); // Clear all targets specified
+
+    // Move to second position
+    positions[1].pose.position.z += 0.2;
+    move_group.setPoseTarget(positions[1].pose);
     move_group.move(); // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 

@@ -45,7 +45,6 @@ void mySigintHandler(int sig) {
 
     // All the default sigint handler does is call shutdown()
     switch_controllers(switch_client, switch_srv, (char*)"scaled_pos_joint_traj_controller", (char*)"twist_controller");
-    ros::Duration(30).sleep(); // wait for consenting the task_positions subscriber to retrieve data
     ros::shutdown();
 }
 
@@ -126,7 +125,7 @@ int main(int argc, char** argv) {
             linear = set(0, 0, 0);
         }
 
-        if(std::abs(torque.z) > 2.5) {
+        if(std::abs(torque.z) > 1.5) {
             positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
             feedback(gripper_publisher);
             ROS_INFO("Acquired position");
