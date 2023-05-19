@@ -8,6 +8,7 @@
 #include "robotiq_ft_sensor/sensor_accessor.h"
 #include <geometry_msgs/Twist.h>
 #include <ur5_ft_tasks/controllers.h>
+#include <ur5_ft_tasks/utils.h>
 #include <math.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -113,28 +114,36 @@ int main(int argc, char** argv) {
     publisher.publish(move);
 
     ros::Rate rate(100);
-    int alpha = 300;
-    int threshold = 8;
+    int alpha = 200;
+    int threshold = 5;
     std::vector<geometry_msgs::PoseStamped> positions;
+    std::vector<geometry_msgs::Vector3> forces;
 
     while(ros::ok() && positions.size() < 2) {
-        double module = sqrt(pow(force.x, 2) + pow(force.y, 2) + pow(force.z, 2));
-        if(module > threshold) {
-            linear = set(force.x/alpha, -force.y/alpha, -force.z/alpha);
+        if(forces.size() < 15) {
+            forces.push_back(force);
         } else {
-            linear = set(0, 0, 0);
+            forces.erase(forces.begin());
+            forces.push_back(force);
+            geometry_msgs::Vector3 current = mean(forces);
+            double module = sqrt(pow(current.x, 2) + pow(current.y, 2) + pow(current.z, 2));
+            if(module > threshold) {
+                linear = set(current.x/alpha, -current.y/alpha, -current.z/alpha);
+            } else {
+                linear = set(0, 0, 0);
+            }
+
+            if(std::abs(torque.z) > 1) {
+                positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
+                feedback(gripper_publisher);
+                ROS_INFO("Acquired position");
+            }
+
+            // linear is (0, 0, 0) if force < threshold or a position is saved
+            move.linear = linear;
+
+            publisher.publish(move);
         }
-
-        if(std::abs(torque.z) > 1.5) {
-            positions.push_back(move_group.getCurrentPose("robotiq_ft_frame_id"));
-            feedback(gripper_publisher);
-            ROS_INFO("Acquired position");
-        }
-
-        // linear is (0, 0, 0) if force < threshold or a position is saved
-        move.linear = linear;
-
-        publisher.publish(move);
 
         ros::spinOnce();
         rate.sleep();
