@@ -50,19 +50,18 @@ int main(int argc, char** argv) {
     move.linear = set(0, 0, 0);
     move.angular = set(0, 0, 0);
 
-    ros::Rate rate(72); // 5 secondi per fare un angolo giro
-    double w = 0.25;
+    double v = 0.5;
 
     for(double radius = 0.05; radius < 0.25; radius += 0.01) {
         ROS_WARN("Radius: %f", radius);
         for(int angle = 0; angle < 360; angle++) {
             double rad = angle * M_PI / 180;
             ROS_WARN("Angle: %d", angle);
-            double v = radius * w;
+            double w = v / radius;
             move.linear = set(v * sin(rad), v * cos(rad), 0);
             publisher.publish(move);
             ROS_INFO("%f, %f, %f", move.linear.x, move.linear.y, move.linear.z);
-            rate.sleep();
+            ros::Duration(1 / w).sleep();
         }
         move.linear = set(0, 0, 0);
     }
