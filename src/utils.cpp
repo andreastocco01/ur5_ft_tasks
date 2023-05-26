@@ -1,4 +1,6 @@
 #include <geometry_msgs/Vector3.h>
+#include <ros/ros.h>
+#include "robotiq_ft_sensor/sensor_accessor.h"
 
 geometry_msgs::Vector3 mean(std::vector<geometry_msgs::Vector3> &vec) {
     geometry_msgs::Vector3 mean;
@@ -30,4 +32,21 @@ geometry_msgs::Vector3 standard_deviation(std::vector<geometry_msgs::Vector3> &v
     sd.z = sqrt(sd.z / vec.size());
 
     return sd;
+}
+
+geometry_msgs::Vector3 set(double x, double y, double z) {
+    geometry_msgs::Vector3 vector;
+    vector.x = x;
+    vector.y = y;
+    vector.z = z;
+
+    return vector;
+}
+
+void zero_sensor(robotiq_ft_sensor::sensor_accessor &srv, ros::ServiceClient &client) {
+    srv.request.command_id = srv.request.COMMAND_SET_ZERO;
+
+    if (client.call(srv)) {
+        ROS_INFO("Zeroing: %s", srv.response.res.c_str());
+    }
 }
