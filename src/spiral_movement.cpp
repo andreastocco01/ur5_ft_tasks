@@ -2,6 +2,8 @@
 #include <signal.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <std_msgs/UInt16.h>
+#include <cmath>
 #include "robotiq_ft_sensor/ft_sensor.h"
 #include "robotiq_ft_sensor/sensor_accessor.h"
 #include "ur5_ft_tasks/utils.h"
@@ -46,6 +48,7 @@ int main(int argc, char** argv) {
     controller_manager_msgs::LoadController load_srv;
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
+    ros::Publisher gripper_publisher = node.advertise<std_msgs::UInt16>("/gripper_control/servo_debug", 1);
 
     load_controller(load_client, load_srv, (char*)"twist_controller");
     switch_controllers(switch_client, switch_srv, (char*)"twist_controller", (char*)"scaled_pos_joint_traj_controller");
@@ -61,20 +64,29 @@ int main(int argc, char** argv) {
         publisher.publish(move);
     }
     
-    ros::Rate rate(72); // 5 secondi per fare un angolo giro
+    ros::Rate rate(30); // 5 secondi per fare un angolo giro
     double w = 0.25;
-    double radius = 0.01;
+    double radius = 0.005;
     double angle = 0;
 
-    while(ros::ok && force.z < -1) {
+    while(ros::ok && (sqrt(pow(force.x, 2) + pow(force.y, 2))) < 6.5) {
         double rad = angle * M_PI / 180;
         double v = radius * w;
-        move.linear = set(v * sin(rad), v * cos(rad), 0);
+        if(force.z > -1) move.linear = set(0, 0, -0.015);
+        else move.linear = set(v * sin(rad), v * cos(rad), 0);
         publisher.publish(move);
-        rate.sleep();
-        radius += 0.0001;
+        radius += 0.00005;
         angle++;
+        rate.sleep();
     }
+
+    move.linear = set(0, 0, 0);
+    publisher.publish(move);
+    std_msgs::UInt16 gripper_position;
+    gripper_position.data = 180;
+    gripper_publisher.publish(gripper_position);
+    sleep(1);
+
     mySigintHandler(SIGINT);
     return 0;
 }

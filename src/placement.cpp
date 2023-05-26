@@ -127,19 +127,19 @@ int main(int argc, char** argv){
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // Open gripper
-    gripper_position.data = 110;
+    gripper_position.data = 180;
     gripper_publisher.publish(gripper_position);
     sleep(1);
 
     // Down to half object height
-    object_height.pose.position.z += 0.01;
-    object_height.pose.position.z -= ((object_height.pose.position.z - table_height.pose.position.z) / 2) + 0.02;
+    object_height.pose.position.z -= 0.01;
+    object_height.pose.position.z -= ((object_height.pose.position.z - table_height.pose.position.z) / 2) + 0.015;
     move_group.setPoseTarget(object_height.pose);
     move_group.move();  // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified
 
     // Close gripper
-    gripper_position.data = 45;
+    gripper_position.data = 0;
     gripper_publisher.publish(gripper_position);
     sleep(1);
 

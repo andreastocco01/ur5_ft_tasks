@@ -282,7 +282,7 @@ h_offset: float = -0.15 #TODO: fix sign
 length_offset: float = -0.25 #TODO: fix sign
 movement: Twist
 publisher: Publisher
-in_contact_threshold: float = 2
+in_contact_threshold: float = 8
 #out_contact_threshold: float = 0.7
 move_group: MoveGroupCommander
 moveit_speed = 0.5

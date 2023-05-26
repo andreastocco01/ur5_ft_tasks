@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
     std::vector<geometry_msgs::PoseStamped> positions;
     std::vector<geometry_msgs::Vector3> forces;
 
-    while(ros::ok() && positions.size() < 2) {
-        if(forces.size() < 15) {
+    while(ros::ok() && positions.size() < 3) {
+        if(forces.size() < 20) {
             forces.push_back(force);
         } else {
             forces.erase(forces.begin());
