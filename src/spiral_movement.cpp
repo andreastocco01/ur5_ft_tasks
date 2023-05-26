@@ -1,23 +1,15 @@
 #include <ros/ros.h>
-#include "ur5_ft_tasks/controllers.h"
-#include "robotiq_ft_sensor/ft_sensor.h"
-#include "robotiq_ft_sensor/sensor_accessor.h"
 #include <signal.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/WrenchStamped.h>
-#include <cmath>
+#include "robotiq_ft_sensor/ft_sensor.h"
+#include "robotiq_ft_sensor/sensor_accessor.h"
+#include "ur5_ft_tasks/utils.h"
+#include "ur5_ft_tasks/controllers.h"
 
 geometry_msgs::Vector3 force, torque;
 ros::ServiceClient switch_client;
 controller_manager_msgs::SwitchController switch_srv;
-
-void zero_sensor(robotiq_ft_sensor::sensor_accessor &srv, ros::ServiceClient &client) {
-    srv.request.command_id = srv.request.COMMAND_SET_ZERO;
-
-    if (client.call(srv)) {
-        ROS_INFO("Zeroing: %s", srv.response.res.c_str());
-    }
-}
 
 void callback(const geometry_msgs::WrenchStamped::ConstPtr& msg) {
     force = msg->wrench.force;
@@ -34,18 +26,10 @@ void mySigintHandler(int sig) {
     ros::shutdown();
 }
 
-geometry_msgs::Vector3 set(double x, double y, double z) {
-    geometry_msgs::Vector3 vector;
-    vector.x = x;
-    vector.y = y;
-    vector.z = z;
-
-    return vector;
-}
-
 int main(int argc, char** argv) {
     ros::init(argc, argv, "spiral");
     ros::NodeHandle node;
+
     // Override the default ros sigint handler.
     // This must be set after the first NodeHandle is created.
     signal(SIGINT, mySigintHandler);
@@ -70,31 +54,26 @@ int main(int argc, char** argv) {
     zero_sensor(srv, client);
 
     geometry_msgs::Twist move;
-    move.linear = set(0, 0, 0);
     move.angular = set(0, 0, 0);
 
-    while(force.z > -1) {
-        move.linear = set(0, 0, -0.02);
+    while(force.z > -8) {
+        move.linear = set(0, 0, -0.015);
         publisher.publish(move);
     }
     
     ros::Rate rate(72); // 5 secondi per fare un angolo giro
     double w = 0.25;
-    double radius = 0.05;
+    double radius = 0.01;
+    double angle = 0;
 
-    while(ros::ok && abs(force.x) < 7 && abs(force.y) < 7) {
-        for(int angle = 0; angle < 360; angle++) {
-            double rad = angle * M_PI / 180;
-            double v = radius * w;
-            if(force.z > -1) move.linear = set(v * sin(rad), v * cos(rad), -0.01);
-            else move.linear = set(v * sin(rad), v * cos(rad), 0);
-            if(abs(force.x) >= 7 || abs(force.y) >= 7) break;
-            publisher.publish(move);
-            ROS_INFO("%f, %f, %f", move.linear.x, move.linear.y, move.linear.z);
-            rate.sleep();
-        }
-        move.linear = set(0, 0, 0);
-        radius += 0.01;
+    while(ros::ok && force.z < -1) {
+        double rad = angle * M_PI / 180;
+        double v = radius * w;
+        move.linear = set(v * sin(rad), v * cos(rad), 0);
+        publisher.publish(move);
+        rate.sleep();
+        radius += 0.0001;
+        angle++;
     }
     mySigintHandler(SIGINT);
     return 0;
