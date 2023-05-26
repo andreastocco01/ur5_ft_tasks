@@ -4,40 +4,23 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <std_msgs/UInt16.h>
-#include "robotiq_ft_sensor/ft_sensor.h"
-#include "robotiq_ft_sensor/sensor_accessor.h"
 #include <geometry_msgs/Twist.h>
-#include <ur5_ft_tasks/controllers.h>
-#include <ur5_ft_tasks/utils.h>
 #include <math.h>
 #include <stdlib.h>
 #include <signal.h>
+#include "ur5_ft_tasks/controllers.h"
+#include "ur5_ft_tasks/utils.h"
+#include "robotiq_ft_sensor/ft_sensor.h"
+#include "robotiq_ft_sensor/sensor_accessor.h"
 
 geometry_msgs::Vector3 force, torque;
 ros::ServiceClient switch_client;
 controller_manager_msgs::SwitchController switch_srv;
 
-void zero_sensor(robotiq_ft_sensor::sensor_accessor &srv, ros::ServiceClient &client) {
-    srv.request.command_id = srv.request.COMMAND_SET_ZERO;
-
-    if (client.call(srv)) {
-        ROS_INFO("Zeroing: %s", srv.response.res.c_str());
-    }
-}
-
 void callback(const geometry_msgs::WrenchStamped::ConstPtr& msg) {
     force = msg->wrench.force;
     torque = msg->wrench.torque;
     //ROS_INFO("I heard: fx[%f], fy[%f], fz[%f], tx[%f], ty[%f], tz[%f]", force.x, force.y, force.z, torque.x, torque.y, torque.z);
-}
-
-geometry_msgs::Vector3 set(double x, double y, double z) {
-    geometry_msgs::Vector3 vector;
-    vector.x = x;
-    vector.y = y;
-    vector.z = z;
-
-    return vector;
 }
 
 void mySigintHandler(int sig) {
