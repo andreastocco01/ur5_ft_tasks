@@ -133,7 +133,7 @@ int main(int argc, char** argv){
 
     // Down to half object height
     object_height.pose.position.z -= 0.01;
-    object_height.pose.position.z -= ((object_height.pose.position.z - table_height.pose.position.z) / 2) + 0.015;
+    object_height.pose.position.z -= ((object_height.pose.position.z - table_height.pose.position.z) / 2) + 0.015 - 0.015;
     move_group.setPoseTarget(object_height.pose);
     move_group.move();  // Plan and execute movement waiting for success
     move_group.clearPoseTargets(); // Clear all targets specified

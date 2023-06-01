@@ -2,15 +2,20 @@
 #include <signal.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/UInt16.h>
 #include <cmath>
+#include <moveit/move_group_interface/move_group_interface.h>
 #include "robotiq_ft_sensor/ft_sensor.h"
 #include "robotiq_ft_sensor/sensor_accessor.h"
 #include "ur5_ft_tasks/utils.h"
 #include "ur5_ft_tasks/controllers.h"
 
+using namespace moveit::planning_interface;
+
 geometry_msgs::Vector3 force, torque;
 ros::ServiceClient switch_client;
+const std::string PLANNING_GROUP_ARM = "ur5_arm";
 controller_manager_msgs::SwitchController switch_srv;
 
 void callback(const geometry_msgs::WrenchStamped::ConstPtr& msg) {
@@ -42,6 +47,8 @@ int main(int argc, char** argv) {
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
+    MoveGroupInterface move_group(PLANNING_GROUP_ARM);
+
     ros::Publisher publisher = node.advertise<geometry_msgs::Twist>("/twist_controller/command", 1);
     switch_client = node.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
     ros::ServiceClient load_client = node.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
@@ -58,28 +65,41 @@ int main(int argc, char** argv) {
 
     geometry_msgs::Twist move;
     move.angular = set(0, 0, 0);
+    double th = 6.5;
+    bool first_time = true;
+    geometry_msgs::PoseStamped height;
 
-    while(force.z > -8) {
-        move.linear = set(0, 0, -0.015);
-        publisher.publish(move);
-    }
-    
+    // Init
     ros::Rate rate(30); // 5 secondi per fare un angolo giro
     double w = 0.25;
     double radius = 0.005;
     double angle = 0;
 
-    while(ros::ok && (sqrt(pow(force.x, 2) + pow(force.y, 2))) < 6.5) {
+keep_contact:
+    while(force.z > -8) {
+        move.linear = set(0, 0, -0.015);
+        publisher.publish(move);
+    }
+    move.linear = set(0, 0, 0);
+    
+    if(first_time) height = move_group.getCurrentPose("robotiq_ft_frame_id");
+    first_time = false;
+
+    geometry_msgs::PoseStamped current = move_group.getCurrentPose("robotiq_ft_frame_id");
+    while(ros::ok && (height.pose.position.z - current.pose.position.z) < 0.02 && force.z <= -8) {
         double rad = angle * M_PI / 180;
         double v = radius * w;
-        if(force.z > -1) move.linear = set(0, 0, -0.015);
-        else move.linear = set(v * sin(rad), v * cos(rad), 0);
+        move.linear = set(v * sin(rad), v * cos(rad), 0);
         publisher.publish(move);
-        radius += 0.00005;
+        radius += 0.00001;
         angle++;
         rate.sleep();
     }
 
+    if(force.z > -8 && (height.pose.position.z - current.pose.position.z) < 0.02) {
+        goto keep_contact;
+    }
+    
     move.linear = set(0, 0, 0);
     publisher.publish(move);
     std_msgs::UInt16 gripper_position;
