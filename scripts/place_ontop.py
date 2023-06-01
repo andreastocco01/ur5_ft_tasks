@@ -277,9 +277,9 @@ def reach_point(point: Point):
 # TODO: Fix signs of offsets - apparently moveit and twist controller have different reference frames
 # Global variables
 speed: float = 0.01
-v_offset: float = 0.04 # Altezza
-h_offset: float = -0.15 #TODO: fix sign
-length_offset: float = -0.25 #TODO: fix sign
+v_offset: float = 0.05 # Altezza
+h_offset: float = -0.25 #TODO: fix sign
+length_offset: float = -0.3 #TODO: fix sign
 movement: Twist
 publisher: Publisher
 in_contact_threshold: float = 8
@@ -436,6 +436,18 @@ def main():
     current_position.y = y_center
     rospy.loginfo(f"Desidered position X: {left_border_position.x} + {right_border_position.x} / 2 =\n= {current_position.x}")
     reach_point(current_position)
+
+
+
+    # Trovato centro
+
+    # Muove down
+    # Move down till contact
+    movement = Twist()
+    movement.angular = Vector3(0, 0, 0)
+    movement.linear = Vector3(0, 0, -speed) # Move down
+    publisher.publish(movement)
+    wait_until_contact(Movement.DOWN)
 
 if __name__ == "__main__":
     try:
