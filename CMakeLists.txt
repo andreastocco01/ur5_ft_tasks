@@ -218,6 +218,9 @@ target_link_libraries(position_force_follower ${catkin_LIBRARIES})
 add_executable(velocity_force_follower src/velocity_force_follower.cpp)
 target_link_libraries(velocity_force_follower ${catkin_LIBRARIES} controllers utils)
 
+add_executable(full_velocity_force_follower src/full_velocity_force_follower.cpp)
+target_link_libraries(full_velocity_force_follower ${catkin_LIBRARIES} controllers utils)
+
 add_executable(placement src/placement.cpp)
 target_link_libraries(placement ${catkin_LIBRARIES} utils controllers)
 
