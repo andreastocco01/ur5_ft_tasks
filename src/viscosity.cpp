@@ -48,7 +48,7 @@ void mySigintHandler(int sig) {
 }
 
 double calculate_viscosity(double force, double velocity) {
-    return force / (2 * (0.06 - 0.01) * 0.04 * 0.004 * velocity); // l'area del rettangolo immerso e' circa 0.05 * 0.04
+    return force / (2 * (0.06 - 0.01) * 0.04 * velocity); // l'area del rettangolo immerso e' circa 0.05 * 0.04
 }
 
 int main(int argc, char** argv) {
