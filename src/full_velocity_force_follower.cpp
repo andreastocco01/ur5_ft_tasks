@@ -79,6 +79,16 @@ int main(int argc, char** argv) {
     load_controller(load_client, load_srv, (char*)"twist_controller");
     switch_controllers(switch_client, switch_srv, (char*)"twist_controller", (char*)"scaled_pos_joint_traj_controller");
 
+    /*
+     * Aggiunta: uso un waitForMessage per aspettare che il sensore si attivi
+    */
+    while(true)
+    {
+        auto msg = ros::topic::waitForMessage<geometry_msgs::WrenchStamped>("robotiq_ft_wrench");
+        if(msg)
+            break;
+    }
+
     robotiq_ft_sensor::sensor_accessor srv;
 
     zero_sensor(srv, client);
