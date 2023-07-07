@@ -30,8 +30,8 @@ void mySigintHandler(int sig) {
     ros::shutdown();
 }
 
-double calculate_viscosity(double force, double velocity) {
-    return force / (2 * (0.06 - 0.01) * 0.04 * velocity); // l'area del rettangolo immerso e' circa 0.05 * 0.04
+double calculate_viscosity(double momentum, double velocity) {
+    return momentum / (2 * M_PI * velocity * 0.075 * pow(0.02, 3)) * 0.015; // l'area del rettangolo immerso e' circa 0.05 * 0.04
 }
 
 int main(int argc, char** argv) {
@@ -61,24 +61,24 @@ int main(int argc, char** argv) {
     moveit::planning_interface::PlanningSceneInterface current_scene;
 
     // 1. move to home_viscosity position
-    move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
-    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
-    move_group.move();
+    // move_group.setJointValueTarget(move_group.getNamedTargetValues("home"));
+    // bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    // ROS_INFO("Move to HOME pose %s", success ? "SUCCESS" : "FAILED");
+    // move_group.move();
 
-    geometry_msgs::PoseStamped current_pose;
-    geometry_msgs::Pose target_pose;
+    // geometry_msgs::PoseStamped current_pose;
+    // geometry_msgs::Pose target_pose;
 
-    // 2. go down
-    current_pose = move_group.getCurrentPose("robotiq_ft_frame_id"); // this is the end-effector!!!
-    target_pose.position.x = current_pose.pose.position.x;
-    target_pose.position.y = current_pose.pose.position.y;
-    target_pose.position.z = current_pose.pose.position.z - 0.23;
-    target_pose.orientation = current_pose.pose.orientation;
-    move_group.setPoseTarget(target_pose);
-    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO("Down move %s", success ? "SUCCESS" : "FAILED");
-    move_group.move();
+    // // 2. go down
+    // current_pose = move_group.getCurrentPose("robotiq_ft_frame_id"); // this is the end-effector!!!
+    // target_pose.position.x = current_pose.pose.position.x;
+    // target_pose.position.y = current_pose.pose.position.y;
+    // target_pose.position.z = current_pose.pose.position.z - 0.23;
+    // target_pose.orientation = current_pose.pose.orientation;
+    // move_group.setPoseTarget(target_pose);
+    // success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    // ROS_INFO("Down move %s", success ? "SUCCESS" : "FAILED");
+    // move_group.move();
 
     ros::ServiceClient client = node.serviceClient<robotiq_ft_sensor::sensor_accessor>("robotiq_ft_sensor_acc");
     ros::Subscriber subscriber = node.subscribe("robotiq_ft_wrench", 100, callback);
@@ -117,10 +117,10 @@ int main(int argc, char** argv) {
         vec.push_back(torque);
         rate.sleep();
     }
-    double force = mean(vec).z;
-    double viscosity = calculate_viscosity(force, velocity);
+    double momentum = mean(vec).z;
+    double viscosity = calculate_viscosity(momentum, velocity);
 
-    ROS_INFO("Mean: %f, Standard deviation: %f", mean(vec).z, standard_deviation(vec, mean(vec)).z);
+    ROS_INFO("Momentum: %f, Standard deviation: %f", momentum, standard_deviation(vec, mean(vec)).z);
     ROS_INFO("Measurements: %ld", vec.size());
     ROS_INFO("Viscosity: %f", viscosity);
 
