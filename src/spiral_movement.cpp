@@ -74,32 +74,31 @@ int main(int argc, char** argv) {
     double w = 0.25;
     double radius = 0.005;
     double angle = 0;
+    geometry_msgs::PoseStamped current = move_group.getCurrentPose("robotiq_ft_frame_id"); // initialize the pose for the cycle
 
-keep_contact:
-    while(force.z > -8) {
-        move.linear = set(0, 0, -0.015);
-        publisher.publish(move);
-    }
-    move.linear = set(0, 0, 0);
-    
-    if(first_time) height = move_group.getCurrentPose("robotiq_ft_frame_id");
-    first_time = false;
+    do {
+        while(force.z > -8) {
+            move.linear = set(0, 0, -0.015);
+            publisher.publish(move);
+        }
+        move.linear = set(0, 0, 0);
 
-    geometry_msgs::PoseStamped current = move_group.getCurrentPose("robotiq_ft_frame_id");
-    while(ros::ok && (height.pose.position.z - current.pose.position.z) < 0.02 && force.z <= -8) {
-        double rad = angle * M_PI / 180;
-        double v = radius * w;
-        move.linear = set(v * sin(rad), v * cos(rad), 0);
-        publisher.publish(move);
-        radius += 0.00001;
-        angle++;
-        rate.sleep();
-    }
+        if(first_time) height = move_group.getCurrentPose("robotiq_ft_frame_id");
+        first_time = false;
 
-    if(force.z > -8 && (height.pose.position.z - current.pose.position.z) < 0.02) {
-        goto keep_contact;
-    }
-    
+        current = move_group.getCurrentPose("robotiq_ft_frame_id");
+        while(ros::ok && (height.pose.position.z - current.pose.position.z) < 0.02 && force.z <= -8) {
+            double rad = angle * M_PI / 180;
+            double v = radius * w;
+            move.linear = set(v * sin(rad), v * cos(rad), 0);
+            publisher.publish(move);
+            radius += 0.00001;
+            angle++;
+            rate.sleep();
+        }
+
+    } while(force.z > -8 && (height.pose.position.z - current.pose.position.z) < 0.02);
+
     move.linear = set(0, 0, 0);
     publisher.publish(move);
     std_msgs::UInt16 gripper_position;
